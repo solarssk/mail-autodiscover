@@ -1,0 +1,14 @@
+services:
+  mail-autodiscover:
+    build: .
+    container_name: mail-autodiscover
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${HOST_PORT:-8088}:${CONTAINER_PORT:-8000}"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\\\"CONTAINER_PORT\\\", \\\"8000\\\")}/health')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
