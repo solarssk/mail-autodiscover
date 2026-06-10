@@ -50,7 +50,7 @@ There is **no admin API** in MVP. Configuration is via environment variables onl
 - Security headers (`nosniff`, `no-referrer`, `DENY`, `no-store`)
 - Neutral error messages (no domain list leakage)
 - Non-root container user
-- CI: gitleaks, bandit, pip-audit, Trivy image scan, CodeQL (Python + Actions)
+- CI: gitleaks, bandit, pip-audit, Trivy image scan, CodeQL (GitHub default setup)
 
 ## Deployment requirements
 
