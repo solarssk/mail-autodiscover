@@ -46,7 +46,7 @@ def test_outlook_contains_imap_and_smtp(client: TestClient) -> None:
     )
     assert "<Type>IMAP</Type>" in response.text
     assert "<Type>SMTP</Type>" in response.text
-    assert "mail.example.com" in response.text
+    assert "<Server>mail.example.com</Server>" in response.text
 
 
 def test_outlook_contains_login_name(client: TestClient) -> None:
