@@ -75,6 +75,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - run: python -m pip install --upgrade "pip>=26.1.2"
       - run: pip install ".[dev]"
       - run: bandit -r app -ll -c pyproject.toml
       - run: pip-audit
