@@ -1,15 +1,22 @@
-FROM python:3.12-slim
+# Pin to bookworm for predictable Debian security updates.
+# Dependabot proposes digest bumps via .github/dependabot.yml (docker ecosystem).
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-RUN addgroup --system app && adduser --system --ingroup app app
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && addgroup --system app \
+    && adduser --system --ingroup app app
 
 COPY pyproject.toml README.md ./
 COPY app ./app
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir --upgrade "pip>=26.1.2" \
+    && pip install --no-cache-dir .
 
 USER app
 

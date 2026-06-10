@@ -66,7 +66,7 @@ def test_thunderbird_pop3_block_when_enabled() -> None:
         )
     assert response.status_code == 200
     assert 'type="pop3"' in response.text
-    assert "pop.example.com" in response.text
+    assert "<hostname>pop.example.com</hostname>" in response.text
     assert "<port>995</port>" in response.text
 
 

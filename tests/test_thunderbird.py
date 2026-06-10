@@ -19,7 +19,7 @@ def test_thunderbird_content_type(client: TestClient) -> None:
 
 def test_thunderbird_contains_imap(client: TestClient) -> None:
     response = client.get("/mail/config-v1.1.xml", params={"emailaddress": "user@example.com"})
-    assert "mail.example.com" in response.text
+    assert "<hostname>mail.example.com</hostname>" in response.text
     assert "<port>993</port>" in response.text
     assert 'type="imap"' in response.text
 
