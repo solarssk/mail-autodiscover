@@ -48,13 +48,43 @@ USERNAME_FORMAT=email
 
 Full list of variables: [.env.example](.env.example)
 
-### Docker Compose
+### Docker Compose (build locally)
 
 ```bash
 cp .env.example .env
 # edit .env as needed
 docker compose up -d --build
 ```
+
+### Portainer / GHCR (recommended)
+
+Pre-built images are published to GitHub Container Registry on every push to `main` and on version tags (`v*`):
+
+```text
+ghcr.io/solarssk/autodiscover:latest
+ghcr.io/solarssk/autodiscover:<git-sha>
+ghcr.io/solarssk/autodiscover:v0.1.0
+```
+
+**Portainer — Stack example:**
+
+```yaml
+services:
+  mail-autodiscover:
+    image: ghcr.io/solarssk/autodiscover:latest
+    container_name: mail-autodiscover
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${HOST_PORT:-8088}:8000"
+```
+
+1. Make the GHCR package **public** (first time): GitHub → Packages → `autodiscover` → Package settings → Change visibility.
+2. In Portainer: Stacks → Add stack → paste the compose above → add `.env` from [`.env.example`](.env.example).
+3. Pin a specific tag in production (`v0.1.0` or SHA) instead of `latest`.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for release workflow.
 
 ### Local (without Docker)
 
@@ -126,9 +156,13 @@ curl -X POST "http://localhost:8088/autodiscover/autodiscover.xml" \
 
 ```bash
 pip install ".[dev]"
-pytest -v
+pytest -v          # includes coverage gate (≥90%)
 ruff check .
+mypy app
+bandit -r app -ll -c pyproject.toml
 ```
+
+CI runs on every pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Roadmap
 

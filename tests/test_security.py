@@ -47,9 +47,8 @@ def test_logs_do_not_contain_full_email(caplog: pytest.LogCaptureFixture) -> Non
     settings = make_settings(disable_access_log=False, log_level="INFO")
     app = create_app(FixedSettingsProvider(settings))
 
-    with caplog.at_level(logging.INFO, logger="mail_autodiscover.access"):
-        with TestClient(app) as c:
-            c.get("/mail/config-v1.1.xml", params={"emailaddress": "secret.user@example.com"})
+    with caplog.at_level(logging.INFO, logger="mail_autodiscover.access"), TestClient(app) as c:
+        c.get("/mail/config-v1.1.xml", params={"emailaddress": "secret.user@example.com"})
 
     log_text = " ".join(r.message for r in caplog.records)
     assert "secret.user@example.com" not in log_text

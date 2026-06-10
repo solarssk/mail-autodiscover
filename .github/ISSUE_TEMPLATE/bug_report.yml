@@ -1,0 +1,64 @@
+name: Bug report
+description: Something is not working as expected.
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version / image tag
+      placeholder: "e.g. ghcr.io/solarssk/autodiscover:latest or v0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment type
+      options:
+        - Docker Compose
+        - Portainer
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: Mail client
+      options:
+        - Outlook
+        - Thunderbird
+        - Apple Mail
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+
+  - type: textarea
+    id: curl
+    attributes:
+      label: curl output (redact real emails if needed)
+      description: Paste curl command and response for autodiscover/autoconfig endpoint.
+      render: shell
+    validations:
+      required: false

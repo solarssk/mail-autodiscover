@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest an idea for mail-autodiscover.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem does this solve? Who benefits?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Security considerations
+      options:
+        - label: This must not enable mailbox enumeration on public endpoints
+          required: true
+        - label: This does not require logging full email addresses

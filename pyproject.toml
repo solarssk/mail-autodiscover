@@ -18,9 +18,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "bandit>=1.8.0",
+    "deptry>=0.23.0",
     "httpx>=0.28.0",
     "mypy>=1.13.0",
+    "pip-audit>=2.7.0",
     "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
     "ruff>=0.8.0",
 ]
 
@@ -32,7 +36,8 @@ target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -43,4 +48,35 @@ warn_unused_configs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+addopts = "--cov=app --cov-report=term-missing --cov-fail-under=90"
 filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+skips = ["B101"]
+
+[tool.deptry]
+ignore = ["DEP003"]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = [
+    "uvicorn",
+    "bandit",
+    "deptry",
+    "httpx",
+    "mypy",
+    "pip-audit",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
