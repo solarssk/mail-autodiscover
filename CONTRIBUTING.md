@@ -58,13 +58,43 @@ Use labels to classify issues and PRs:
 - Merge **all** open PRs (including Dependabot) before cutting a release.
 - Update `CHANGELOG.md` and `pyproject.toml` version on `main` via PR.
 - Images are published to **GHCR** on every push to `main` and on version tags `v*`.
-- Create a release only after `main` is clean:
-  ```bash
-  git checkout main && git pull
-  git tag v0.1.1
-  git push origin v0.1.1
-  ```
-  Or: `gh release create v0.1.1 --target main --generate-notes`
+
+### CHANGELOG format
+
+Use [Keep a Changelog](https://keepachangelog.com/) sections — they map to emoji in release notes:
+
+| CHANGELOG | Release section |
+|-----------|-----------------|
+| `### Added` | ✨ Added |
+| `### Changed` | 🔄 Changed |
+| `### Fixed` | 🐛 Fixed |
+| `### Security` | 🔒 Security |
+| `### Note` | 📝 Note |
+
+### Cut a release
+
+After `main` is clean:
+
+```bash
+git checkout main && git pull
+git tag v0.1.2
+git push origin v0.1.2
+```
+
+The **Release** workflow reads `CHANGELOG.md` and publishes formatted notes (emoji sections + Docker block).
+
+Preview locally:
+
+```bash
+python scripts/format_release_notes.py v0.1.2
+```
+
+Manual release (same formatting):
+
+```bash
+python scripts/format_release_notes.py v0.1.2 > /tmp/notes.md
+gh release create v0.1.2 --target main --title "v0.1.2" --notes-file /tmp/notes.md
+```
 
 ## Security
 
