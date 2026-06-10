@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mail-autodiscover"
-version = "0.1.2"
+version = "0.2.0"
 description = "Lightweight Outlook Autodiscover and Thunderbird Autoconfig service for self-hosted mail servers"
 readme = "README.md"
 license = "MIT"
@@ -30,6 +30,9 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"app/static" = "app/static"
 
 [tool.ruff]
 target-version = "py312"

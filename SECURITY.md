@@ -2,7 +2,7 @@
 
 ## Scope
 
-**mail-autodiscover** is a lightweight HTTP service that returns IMAP/SMTP configuration XML for Outlook Autodiscover and Thunderbird Autoconfig. It is designed for self-hosted mail servers such as Synology MailPlus Server.
+**mail-autodiscover** is a lightweight HTTP service that returns IMAP/SMTP configuration for Outlook Autodiscover, Thunderbird Autoconfig, and Apple Mail configuration profiles. It is designed for self-hosted mail servers such as Synology MailPlus Server.
 
 ## Core security property: no mailbox enumeration
 
@@ -25,9 +25,13 @@ Do **not** add public endpoints that query Synology API, LDAP, IMAP, or a user d
 ### Public endpoints
 
 - `GET /health`
-- `GET /`
+- `GET /` (HTML landing only)
+- `GET /robots.txt`
+- `GET /favicon.ico`, `GET /apple-touch-icon.png`
 - `GET /mail/config-v1.1.xml`
 - `GET /.well-known/autoconfig/mail/config-v1.1.xml`
+- `GET /mail/ios.mobileconfig`
+- `GET /.well-known/apple-mail.mobileconfig`
 - `POST /autodiscover/autodiscover.xml`
 - `GET /autodiscover/autodiscover.xml`
 
@@ -39,7 +43,7 @@ There is **no admin API** in MVP. Configuration is via environment variables onl
 |------|---------|-------|
 | Full email addresses | **No** | Only `domain_allowed=true/false` and hashed domain prefix |
 | Request XML body | **No** | Never logged |
-| Client IP | Used for rate limiting | Not logged by default in access logs |
+| Client IP | Yes (resolved) | In unified access log as `client_ip=`; never full email addresses |
 | IMAP/SMTP hosts | In XML responses | From ENV, not secret |
 
 ## Mitigations

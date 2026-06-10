@@ -81,9 +81,9 @@ def test_rate_limit_uses_x_forwarded_for_when_trusted() -> None:
     app = create_app(FixedSettingsProvider(settings))
     headers = {"X-Forwarded-For": "203.0.113.10"}
     with TestClient(app) as c:
-        assert c.get("/health", headers=headers).status_code == 200
-        assert c.get("/health", headers=headers).status_code == 200
-        assert c.get("/health", headers=headers).status_code == 429
+        assert c.get("/robots.txt", headers=headers).status_code == 200
+        assert c.get("/robots.txt", headers=headers).status_code == 200
+        assert c.get("/robots.txt", headers=headers).status_code == 429
 
 
 def test_get_client_ip_from_forwarded_header_when_peer_trusted() -> None:

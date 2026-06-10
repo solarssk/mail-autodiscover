@@ -5,17 +5,21 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Query, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 
 from app.config import EnvSettingsProvider, Settings, SettingsProvider
 from app.email_utils import EmailValidationError, validate_email
+from app.landing import landing_page_html, robots_txt
+from app.mobileconfig import MOBILECONFIG_CONTENT_TYPE, apple_mail_mobileconfig
 from app.security import SecurityMiddleware, hash_domain, parse_outlook_email_address
 from app.templates import outlook_autodiscover, outlook_get_neutral_response, thunderbird_autoconfig
 
 XML_CONTENT_TYPE = "application/xml; charset=utf-8"
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 _settings_provider: SettingsProvider = EnvSettingsProvider()
 
@@ -71,9 +75,21 @@ def create_app(settings_provider: SettingsProvider | None = None) -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.get("/")
-    async def root(settings: Annotated[Settings, Depends(get_settings)]) -> dict[str, str]:
-        return {"name": settings.app_name, "status": "running"}
+    @app.get("/", response_class=HTMLResponse)
+    async def root(settings: Annotated[Settings, Depends(get_settings)]) -> HTMLResponse:
+        return HTMLResponse(content=landing_page_html(settings.app_name))
+
+    @app.get("/robots.txt", response_class=PlainTextResponse)
+    async def robots() -> PlainTextResponse:
+        return PlainTextResponse(content=robots_txt(), media_type="text/plain")
+
+    @app.get("/favicon.ico")
+    async def favicon() -> FileResponse:
+        return FileResponse(_STATIC_DIR / "favicon.ico", media_type="image/x-icon")
+
+    @app.get("/apple-touch-icon.png")
+    async def apple_touch_icon() -> FileResponse:
+        return FileResponse(_STATIC_DIR / "apple-touch-icon.png", media_type="image/png")
 
     async def _thunderbird_config(
         request: Request,
@@ -95,6 +111,32 @@ def create_app(settings_provider: SettingsProvider | None = None) -> FastAPI:
         xml = thunderbird_autoconfig(validated, settings)  # type: ignore[arg-type]
         return _xml_response(xml)
 
+    async def _apple_mobileconfig(
+        request: Request,
+        emailaddress: str | None,
+        settings: Settings,
+    ) -> Response:
+        if not settings.apple_mobileconfig_enabled:
+            return JSONResponse(status_code=404, content={"detail": "Not found"})
+
+        validated, error = validate_email(emailaddress, settings)
+        if error == EmailValidationError.EMPTY:
+            return _invalid_request()
+        if error is not None:
+            request.state.domain_allowed = False
+            return _domain_error_response(settings)
+
+        request.state.domain_allowed = True
+        request.state.domain_hash = hash_domain(validated.domain)  # type: ignore[union-attr]
+        body = apple_mail_mobileconfig(validated, settings)  # type: ignore[arg-type]
+        return Response(
+            content=body,
+            media_type=MOBILECONFIG_CONTENT_TYPE,
+            headers={
+                "Content-Disposition": 'attachment; filename="mail-autodiscover.mobileconfig"'
+            },
+        )
+
     @app.get("/mail/config-v1.1.xml")
     async def thunderbird_config(
         request: Request,
@@ -110,6 +152,22 @@ def create_app(settings_provider: SettingsProvider | None = None) -> FastAPI:
         emailaddress: Annotated[str | None, Query()] = None,
     ) -> Response:
         return await _thunderbird_config(request, emailaddress, settings)
+
+    @app.get("/mail/ios.mobileconfig")
+    async def apple_mobileconfig(
+        request: Request,
+        settings: Annotated[Settings, Depends(get_settings)],
+        emailaddress: Annotated[str | None, Query()] = None,
+    ) -> Response:
+        return await _apple_mobileconfig(request, emailaddress, settings)
+
+    @app.get("/.well-known/apple-mail.mobileconfig")
+    async def apple_mobileconfig_wellknown(
+        request: Request,
+        settings: Annotated[Settings, Depends(get_settings)],
+        emailaddress: Annotated[str | None, Query()] = None,
+    ) -> Response:
+        return await _apple_mobileconfig(request, emailaddress, settings)
 
     @app.post("/autodiscover/autodiscover.xml")
     async def outlook_autodiscover_post(

@@ -77,7 +77,13 @@ class Settings(BaseSettings):
         default=True, alias="RETURN_404_FOR_UNKNOWN_DOMAIN"
     )
     disable_access_log: bool = Field(default=False, alias="DISABLE_ACCESS_LOG")
+    access_log_skip_paths: str = Field(
+        default="/health,/favicon.ico,/apple-touch-icon.png",
+        alias="ACCESS_LOG_SKIP_PATHS",
+    )
     security_headers_enabled: bool = Field(default=True, alias="SECURITY_HEADERS_ENABLED")
+
+    apple_mobileconfig_enabled: bool = Field(default=True, alias="APPLE_MOBILECONFIG_ENABLED")
 
     @field_validator("allowed_domains", mode="before")
     @classmethod
@@ -90,6 +96,11 @@ class Settings(BaseSettings):
     def allowed_domains_set(self) -> frozenset[str]:
         domains = {d.strip().lower() for d in self.allowed_domains.split(",") if d.strip()}
         return frozenset(domains)
+
+    @property
+    def access_log_skip_paths_set(self) -> frozenset[str]:
+        paths = {p.strip() for p in self.access_log_skip_paths.split(",") if p.strip()}
+        return frozenset(paths)
 
     @property
     def trusted_proxy_networks(
