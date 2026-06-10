@@ -6,6 +6,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added (planned v0.2)
+
+- `TRUSTED_PROXY_IPS` / `FORWARDED_ALLOW_IPS` — honor `X-Forwarded-For` / `X-Real-IP` only from configured proxy CIDRs (per-deployment; not preset)
+
 ## [0.1.2] - 2026-06-10
 
 ### Security

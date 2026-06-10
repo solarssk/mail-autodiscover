@@ -117,7 +117,9 @@ https://autoconfig.example.com/mail/config-v1.1.xml
 https://autoconfig.example.com/.well-known/autoconfig/mail/config-v1.1.xml
 ```
 
-Set `TRUST_PROXY_HEADERS=true` only when the application runs behind a trusted reverse proxy (nginx, Caddy, Traefik, NPM). Also set `TRUSTED_PROXY_IPS` (alias `FORWARDED_ALLOW_IPS`) to the proxy/Docker CIDRs that may set `X-Forwarded-For` / `X-Real-IP`, e.g. `127.0.0.1,172.16.2.0/24`. Otherwise clients can spoof forwarded headers and bypass rate limits.
+Set `TRUST_PROXY_HEADERS=true` only when the application runs behind a trusted reverse proxy (nginx, Caddy, Traefik, NPM).
+
+When using a reverse proxy, also set `TRUSTED_PROXY_IPS` (alias `FORWARDED_ALLOW_IPS`) to **your** proxy or Docker bridge CIDRs — comma-separated IPs or networks. Each deployment is different; discover the direct peer IP from container logs (Uvicorn access log) or `docker network inspect <network>` and allow that subnet plus `127.0.0.1` if the proxy runs on the same host. If `TRUSTED_PROXY_IPS` is empty, legacy behavior applies (trust any peer). Planned as a stable v0.2 setting.
 
 ## DNS
 
@@ -176,10 +178,10 @@ CI runs on every pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### v0.2
 
-- Multi-domain config per domain
-- Different IMAP/SMTP hosts per domain
-- Improved rate limiting
-- Optional POP3
+- `TRUSTED_PROXY_IPS` / `FORWARDED_ALLOW_IPS` — safe `X-Forwarded-For` handling per deployment
+- Optional POP3 in autoconfig responses
+- Apple Mail / mobileconfig research
+- (Deferred) per-domain IMAP/SMTP hosts — only if someone needs different mail hosts per domain
 
 ### v0.3
 
