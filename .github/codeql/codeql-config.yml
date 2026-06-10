@@ -4,6 +4,7 @@ paths:
   - app
   - scripts
   - tests
+  - .github/workflows
 
 query-filters:
   - exclude:
