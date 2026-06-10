@@ -6,13 +6,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
-### Added
-
-- Hardened CI (gitleaks, coverage, mypy, bandit, pip-audit, deptry, Trivy)
-- GHCR image publishing (`ghcr.io/solarssk/autodiscover`)
-- Branch protection workflow via CONTRIBUTING.md
-- Additional edge-case tests
-
 ## [0.1.0] - 2026-06-10
 
 ### Added
@@ -22,7 +15,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - ENV-based configuration via pydantic-settings
 - Docker and Docker Compose support
 - Security middleware (rate limit, headers, safe logging)
-- pytest test suite
+- pytest test suite (50 tests, ≥90% coverage)
+- Hardened CI (gitleaks, ruff, mypy, bandit, pip-audit, deptry, Trivy)
+- GHCR image publishing (`ghcr.io/solarssk/autodiscover`)
+- CONTRIBUTING, SECURITY, issue/PR templates, Dependabot
+- Branch protection and repository labels
 - MIT license
 
 [Unreleased]: https://github.com/solarssk/autodiscover/compare/v0.1.0...HEAD
