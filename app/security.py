@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import logging
 import time
 import uuid
@@ -22,18 +23,59 @@ _rate_limit_store: dict[str, list[float]] = defaultdict(list)
 _rate_limit_lock = Lock()
 
 
+def _peer_ip(request: Request) -> str | None:
+    if request.client:
+        return request.client.host
+    return None
+
+
+def _ip_in_trusted_networks(
+    ip_str: str,
+    networks: tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...],
+) -> bool:
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+    return any(ip in network for network in networks)
+
+
+def _should_trust_forwarded_headers(request: Request, settings: Settings) -> bool:
+    if not settings.trust_proxy_headers:
+        return False
+    networks = settings.trusted_proxy_networks
+    if not networks:
+        return True
+    peer = _peer_ip(request)
+    if peer is None:
+        return False
+    return _ip_in_trusted_networks(peer, networks)
+
+
 def get_client_ip(request: Request, settings: Settings) -> str:
-    if settings.trust_proxy_headers:
+    if _should_trust_forwarded_headers(request, settings):
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
             return forwarded.split(",")[0].strip()
-    if request.client:
-        return request.client.host
+        real_ip = request.headers.get("X-Real-IP")
+        if real_ip:
+            return real_ip.strip()
+    peer = _peer_ip(request)
+    if peer:
+        return peer
     return "unknown"
 
 
 def hash_domain(domain: str) -> str:
     return hashlib.sha256(domain.encode()).hexdigest()[:12]
+
+
+def should_skip_rate_limit(path: str) -> bool:
+    return path == "/health"
+
+
+def should_skip_access_log(path: str, settings: Settings) -> bool:
+    return path in settings.access_log_skip_paths_set
 
 
 def is_rate_limited(client_ip: str, settings: Settings) -> bool:
@@ -71,8 +113,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
         request.state.domain_allowed = None
 
+        path = request.url.path
         client_ip = get_client_ip(request, self.settings)
-        if is_rate_limited(client_ip, self.settings):
+        if not should_skip_rate_limit(path) and is_rate_limited(client_ip, self.settings):
             logger.warning(
                 "request_id=%s endpoint=%s status=429 rate_limited=true",
                 request_id,
@@ -94,7 +137,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         response.headers["X-Request-ID"] = request_id
 
-        if not self.settings.disable_access_log:
+        if not self.settings.disable_access_log and not should_skip_access_log(
+            path, self.settings
+        ):
             domain_allowed = getattr(request.state, "domain_allowed", None)
             if domain_allowed is None:
                 domain_info = "domain_allowed=unknown"
@@ -105,9 +150,11 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 domain_info += f" domain_hash={domain_hash}"
 
             logger.info(
-                "request_id=%s endpoint=%s status=%s %s",
+                "request_id=%s client_ip=%s method=%s endpoint=%s status=%s %s",
                 request_id,
-                request.url.path,
+                client_ip,
+                request.method,
+                path,
                 response.status_code,
                 domain_info,
             )

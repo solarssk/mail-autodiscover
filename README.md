@@ -63,26 +63,15 @@ Pre-built images are published to GitHub Container Registry on every push to `ma
 ```text
 ghcr.io/solarssk/autodiscover:latest
 ghcr.io/solarssk/autodiscover:<git-sha>
-ghcr.io/solarssk/autodiscover:v0.1.0
+ghcr.io/solarssk/autodiscover:0.2.0
 ```
 
-**Portainer — Stack example:**
-
-```yaml
-services:
-  mail-autodiscover:
-    image: ghcr.io/solarssk/autodiscover:latest
-    container_name: mail-autodiscover
-    restart: unless-stopped
-    env_file:
-      - .env
-    ports:
-      - "${HOST_PORT:-8088}:8000"
-```
+See [`docker-compose.ghcr.yml`](docker-compose.ghcr.yml) for a full Portainer-ready stack with inline environment placeholders.
 
 1. Make the GHCR package **public** (first time): GitHub → Packages → `autodiscover` → Package settings → Change visibility.
-2. In Portainer: Stacks → Add stack → paste the compose above → add `.env` from [`.env.example`](.env.example).
-3. Pin a specific tag in production (`v0.1.0` or SHA) instead of `latest`.
+2. In Portainer: Stacks → Add stack → paste from `docker-compose.ghcr.yml` → set your domains and mail hosts.
+3. Pin a semver tag in production (`0.2.0`) instead of `latest`.
+4. Set `TRUSTED_PROXY_IPS` to your reverse-proxy / Docker bridge CIDRs (see below).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for release workflow.
 
@@ -93,7 +82,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install ".[dev]"
 cp .env.example .env
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --reload
 ```
 
 ## Endpoints
@@ -101,11 +90,24 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Healthcheck |
-| `GET` | `/` | Application name and status |
+| `GET` | `/` | Minimal HTML landing (no configuration exposed) |
+| `GET` | `/robots.txt` | `Disallow: /` for crawlers |
 | `GET` | `/mail/config-v1.1.xml?emailaddress=...` | Thunderbird Autoconfig |
 | `GET` | `/.well-known/autoconfig/mail/config-v1.1.xml?emailaddress=...` | Thunderbird (well-known) |
+| `GET` | `/mail/ios.mobileconfig?emailaddress=...` | Apple Mail configuration profile |
+| `GET` | `/.well-known/apple-mail.mobileconfig?emailaddress=...` | Apple Mail (well-known alias) |
 | `POST` | `/autodiscover/autodiscover.xml` | Outlook Autodiscover |
 | `GET` | `/autodiscover/autodiscover.xml` | Neutral Outlook response |
+
+### Apple Mail (iPhone / iPad / Mac)
+
+Open in **Safari** (replace domain and email):
+
+```text
+https://autodiscover.example.com/mail/ios.mobileconfig?emailaddress=user@example.com
+```
+
+Install the downloaded profile in **Settings**. Enter your mail password when prompted. Unsigned profiles show an Apple verification warning — expected for self-hosted setups without MDM signing.
 
 ## Reverse proxy
 
@@ -117,7 +119,11 @@ https://autoconfig.example.com/mail/config-v1.1.xml
 https://autoconfig.example.com/.well-known/autoconfig/mail/config-v1.1.xml
 ```
 
-Set `TRUST_PROXY_HEADERS=true` only when the application runs behind a trusted reverse proxy (nginx, Caddy, Traefik). Otherwise the `X-Forwarded-For` header can be spoofed.
+Set `TRUST_PROXY_HEADERS=true` only when the application runs behind a trusted reverse proxy (nginx, Caddy, Traefik, NPM).
+
+When using a reverse proxy, also set `TRUSTED_PROXY_IPS` (alias `FORWARDED_ALLOW_IPS`) to **your** proxy or Docker bridge CIDRs — comma-separated IPs or networks. Each deployment is different; use `docker network inspect <network>` or check the access log `client_ip` vs direct peer. Allow that subnet plus `127.0.0.1` if the proxy runs on the same host. If `TRUSTED_PROXY_IPS` is empty, legacy behavior applies (trust any peer).
+
+On Cloudflare + NPM, configure `real_ip_header CF-Connecting-IP` and Cloudflare IP ranges in NPM so the container receives a correct `X-Forwarded-For`.
 
 ## DNS
 
@@ -174,12 +180,10 @@ CI runs on every pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
 - Docker + Docker Compose
 - Tests + GitHub Actions CI
 
-### v0.2
+### v0.2 (released)
 
-- Multi-domain config per domain
-- Different IMAP/SMTP hosts per domain
-- Improved rate limiting
-- Optional POP3
+- `TRUSTED_PROXY_IPS`, unified access logging, landing page, Apple `.mobileconfig`
+- (Deferred) per-domain IMAP/SMTP hosts, Redis rate limiting
 
 ### v0.3
 

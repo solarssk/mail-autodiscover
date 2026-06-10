@@ -6,6 +6,26 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-10
+
+### Added
+
+- `TRUSTED_PROXY_IPS` / `FORWARDED_ALLOW_IPS` — trust `X-Forwarded-For` / `X-Real-IP` only from configured proxy CIDRs (per deployment)
+- `ACCESS_LOG_SKIP_PATHS` — suppress access logs for noisy paths (default: health, favicon)
+- Apple Mail `.mobileconfig` profiles (`GET /mail/ios.mobileconfig`, `/.well-known/apple-mail.mobileconfig`)
+- HTML landing page, `robots.txt`, `favicon.ico`, `apple-touch-icon.png`
+- `docker-compose.ghcr.yml` example for Portainer / GHCR
+
+### Changed
+
+- Unified access log: single line with `client_ip`, `method`, endpoint, status (Uvicorn access log disabled)
+- `GET /` returns minimal HTML instead of JSON API metadata
+- `/health` excluded from rate limiting
+
+### Security
+
+- Forwarded headers honored only when direct peer matches `TRUSTED_PROXY_IPS` (when set)
+
 ## [0.1.2] - 2026-06-10
 
 ### Security
@@ -44,7 +64,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/autodiscover/compare/v0.1.2...HEAD
-[0.1.2]: https://github.com/solarssk/autodiscover/releases/tag/v0.1.2
+[Unreleased]: https://github.com/solarssk/autodiscover/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/solarssk/autodiscover/releases/tag/v0.2.0
+[0.1.2]: https://github.com/solarssk/autodiscover/compare/v0.1.2...v0.2.0
 [0.1.1]: https://github.com/solarssk/autodiscover/compare/v0.1.1...v0.1.2
 [0.1.0]: https://github.com/solarssk/autodiscover/releases/tag/v0.1.0

@@ -1,0 +1,31 @@
+# Example stack for Portainer / Docker Compose using pre-built GHCR image.
+# Copy environment values from .env.example and set TRUSTED_PROXY_IPS for your proxy/Docker CIDRs.
+
+services:
+  mail-autodiscover:
+    image: ghcr.io/solarssk/autodiscover:0.2.0
+    container_name: mail-autodiscover
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-8088}:8000"
+    environment:
+      APP_NAME: mail-autodiscover
+      APP_ENV: production
+      PUBLIC_BASE_URL: https://autodiscover.example.com
+      ALLOWED_DOMAINS: example.com
+      MAIL_DISPLAY_NAME: Example Mail
+      MAIL_DISPLAY_SHORT_NAME: Example
+      IMAP_HOST: mail.example.com
+      IMAP_PORT: "993"
+      IMAP_SOCKET_TYPE: SSL
+      SMTP_HOST: mail.example.com
+      SMTP_PORT: "587"
+      SMTP_SOCKET_TYPE: STARTTLS
+      USERNAME_FORMAT: email
+      CONTAINER_PORT: "8000"
+      TRUST_PROXY_HEADERS: "true"
+      TRUSTED_PROXY_IPS: ""
+      OUTLOOK_ENABLED: "true"
+      THUNDERBIRD_ENABLED: "true"
+      APPLE_MOBILECONFIG_ENABLED: "true"
+      RETURN_404_FOR_UNKNOWN_DOMAIN: "true"

@@ -25,3 +25,13 @@ def test_socket_type_normalization() -> None:
     settings = make_settings(imap_socket_type="ssl", smtp_socket_type="starttls")
     assert settings.imap_socket_type.value == "SSL"
     assert settings.smtp_socket_type.value == "STARTTLS"
+
+
+def test_trusted_proxy_ips_parsed_as_networks() -> None:
+    settings = make_settings(trusted_proxy_ips="127.0.0.1, 10.0.0.0/8 ,10.0.0.1")
+    assert len(settings.trusted_proxy_networks) == 3
+
+
+def test_access_log_skip_paths_parsed() -> None:
+    settings = make_settings(access_log_skip_paths="/health, /favicon.ico")
+    assert settings.access_log_skip_paths_set == frozenset({"/health", "/favicon.ico"})

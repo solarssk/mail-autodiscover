@@ -76,17 +76,21 @@ def test_rate_limit_uses_x_forwarded_for_when_trusted() -> None:
         rate_limit_enabled=True,
         rate_limit_per_minute=2,
         trust_proxy_headers=True,
+        trusted_proxy_ips="127.0.0.1/32",
     )
     app = create_app(FixedSettingsProvider(settings))
     headers = {"X-Forwarded-For": "203.0.113.10"}
     with TestClient(app) as c:
-        assert c.get("/health", headers=headers).status_code == 200
-        assert c.get("/health", headers=headers).status_code == 200
-        assert c.get("/health", headers=headers).status_code == 429
+        assert c.get("/robots.txt", headers=headers).status_code == 200
+        assert c.get("/robots.txt", headers=headers).status_code == 200
+        assert c.get("/robots.txt", headers=headers).status_code == 429
 
 
-def test_get_client_ip_from_forwarded_header() -> None:
-    settings = make_settings(trust_proxy_headers=True)
+def test_get_client_ip_from_forwarded_header_when_peer_trusted() -> None:
+    settings = make_settings(
+        trust_proxy_headers=True,
+        trusted_proxy_ips="10.0.0.0/8",
+    )
 
     class FakeClient:
         host = "10.0.0.1"
@@ -96,3 +100,35 @@ def test_get_client_ip_from_forwarded_header() -> None:
         client = FakeClient()
 
     assert get_client_ip(FakeRequest(), settings) == "203.0.113.5"  # type: ignore[arg-type]
+
+
+def test_get_client_ip_ignores_forwarded_header_from_untrusted_peer() -> None:
+    settings = make_settings(
+        trust_proxy_headers=True,
+        trusted_proxy_ips="172.16.2.0/24",
+    )
+
+    class FakeClient:
+        host = "203.0.113.99"
+
+    class FakeRequest:
+        headers = {"X-Forwarded-For": "1.2.3.4"}
+        client = FakeClient()
+
+    assert get_client_ip(FakeRequest(), settings) == "203.0.113.99"  # type: ignore[arg-type]
+
+
+def test_get_client_ip_uses_x_real_ip_when_peer_trusted() -> None:
+    settings = make_settings(
+        trust_proxy_headers=True,
+        trusted_proxy_ips="172.16.2.1",
+    )
+
+    class FakeClient:
+        host = "172.16.2.1"
+
+    class FakeRequest:
+        headers = {"X-Real-IP": "198.51.100.7"}
+        client = FakeClient()
+
+    assert get_client_ip(FakeRequest(), settings) == "198.51.100.7"  # type: ignore[arg-type]
