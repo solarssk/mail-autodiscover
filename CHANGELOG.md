@@ -6,6 +6,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-06-10
+
+### Security
+
+- Harden Docker image: `python:3.12-slim-bookworm`, `apt-get upgrade`, pip ≥ 26.1.2
+- Fix CodeQL `py/incomplete-url-substring-sanitization` alerts in tests (assert XML elements instead of hostname substrings)
+
+### Note
+
+- CodeQL runs via GitHub default setup (no custom workflow)
+
 ## [0.1.1] - 2026-06-10
 
 ### Changed
@@ -33,6 +44,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/autodiscover/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/solarssk/autodiscover/releases/tag/v0.1.1
+[Unreleased]: https://github.com/solarssk/autodiscover/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/solarssk/autodiscover/releases/tag/v0.1.2
+[0.1.1]: https://github.com/solarssk/autodiscover/compare/v0.1.1...v0.1.2
 [0.1.0]: https://github.com/solarssk/autodiscover/releases/tag/v0.1.0
