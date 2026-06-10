@@ -85,9 +85,9 @@ def docker_block(version: str, prerelease: bool) -> str:
             "",
             "## 📚 Links",
             "",
-            f"- [Full CHANGELOG](https://github.com/solarssk/autodiscover/blob/main/CHANGELOG.md)",
-            f"- [README](https://github.com/solarssk/autodiscover#portainer--ghcr-recommended)",
-            f"- [.env.example](https://github.com/solarssk/autodiscover/blob/main/.env.example)",
+            "- [Full CHANGELOG](https://github.com/solarssk/autodiscover/blob/main/CHANGELOG.md)",
+            "- [README](https://github.com/solarssk/autodiscover#portainer--ghcr-recommended)",
+            "- [.env.example](https://github.com/solarssk/autodiscover/blob/main/.env.example)",
         ]
     )
     return "\n".join(lines)
