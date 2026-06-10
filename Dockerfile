@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1
 
 RUN addgroup --system app && adduser --system --ingroup app app
 
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
 COPY app ./app
 RUN pip install --no-cache-dir .
 
