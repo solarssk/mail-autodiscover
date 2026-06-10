@@ -55,13 +55,16 @@ Use labels to classify issues and PRs:
 
 ## Releases
 
+- Merge **all** open PRs (including Dependabot) before cutting a release.
+- Update `CHANGELOG.md` and `pyproject.toml` version on `main` via PR.
 - Images are published to **GHCR** on every push to `main` and on version tags `v*`.
-- Create a release by tagging:
+- Create a release only after `main` is clean:
   ```bash
+  git checkout main && git pull
   git tag v0.1.1
   git push origin v0.1.1
   ```
-- Update `CHANGELOG.md` before tagging.
+  Or: `gh release create v0.1.1 --target main --generate-notes`
 
 ## Security
 
