@@ -6,6 +6,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+
+- Replace flaky GitHub CodeQL default setup with explicit `.github/workflows/codeql.yml`
+
 ## [0.2.0] - 2026-06-10
 
 ### Added
