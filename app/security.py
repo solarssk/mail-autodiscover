@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import logging
 import time
 import uuid
@@ -22,13 +23,46 @@ _rate_limit_store: dict[str, list[float]] = defaultdict(list)
 _rate_limit_lock = Lock()
 
 
+def _peer_ip(request: Request) -> str | None:
+    if request.client:
+        return request.client.host
+    return None
+
+
+def _ip_in_trusted_networks(
+    ip_str: str,
+    networks: tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...],
+) -> bool:
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+    return any(ip in network for network in networks)
+
+
+def _should_trust_forwarded_headers(request: Request, settings: Settings) -> bool:
+    if not settings.trust_proxy_headers:
+        return False
+    networks = settings.trusted_proxy_networks
+    if not networks:
+        return True
+    peer = _peer_ip(request)
+    if peer is None:
+        return False
+    return _ip_in_trusted_networks(peer, networks)
+
+
 def get_client_ip(request: Request, settings: Settings) -> str:
-    if settings.trust_proxy_headers:
+    if _should_trust_forwarded_headers(request, settings):
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
             return forwarded.split(",")[0].strip()
-    if request.client:
-        return request.client.host
+        real_ip = request.headers.get("X-Real-IP")
+        if real_ip:
+            return real_ip.strip()
+    peer = _peer_ip(request)
+    if peer:
+        return peer
     return "unknown"
 
 

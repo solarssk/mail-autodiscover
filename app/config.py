@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import ipaddress
 from enum import StrEnum
 from functools import lru_cache
 from typing import Protocol
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,6 +54,10 @@ class Settings(BaseSettings):
     container_port: int = Field(default=8000, alias="CONTAINER_PORT")
 
     trust_proxy_headers: bool = Field(default=True, alias="TRUST_PROXY_HEADERS")
+    trusted_proxy_ips: str = Field(
+        default="",
+        validation_alias=AliasChoices("TRUSTED_PROXY_IPS", "FORWARDED_ALLOW_IPS"),
+    )
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     max_request_body_bytes: int = Field(default=16384, alias="MAX_REQUEST_BODY_BYTES")
@@ -85,6 +90,26 @@ class Settings(BaseSettings):
     def allowed_domains_set(self) -> frozenset[str]:
         domains = {d.strip().lower() for d in self.allowed_domains.split(",") if d.strip()}
         return frozenset(domains)
+
+    @property
+    def trusted_proxy_networks(
+        self,
+    ) -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
+        """Parsed CIDR/IP entries from TRUSTED_PROXY_IPS (empty = trust any peer when enabled)."""
+        entries: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
+        for part in self.trusted_proxy_ips.split(","):
+            token = part.strip()
+            if not token:
+                continue
+            try:
+                if "/" in token:
+                    entries.append(ipaddress.ip_network(token, strict=False))
+                else:
+                    prefix = "128" if ":" in token else "32"
+                    entries.append(ipaddress.ip_network(f"{token}/{prefix}", strict=False))
+            except ValueError:
+                continue
+        return tuple(entries)
 
     @field_validator("imap_socket_type", "smtp_socket_type", "pop3_socket_type", mode="before")
     @classmethod

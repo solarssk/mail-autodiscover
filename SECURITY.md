@@ -56,9 +56,10 @@ There is **no admin API** in MVP. Configuration is via environment variables onl
 
 1. Run behind HTTPS reverse proxy (nginx, Caddy, Traefik).
 2. Set `TRUST_PROXY_HEADERS=true` only behind a trusted proxy.
-3. Keep `ALLOWED_DOMAINS` minimal — only domains you operate.
-4. Do not expose the container directly to the internet without TLS.
-5. Pull images from `ghcr.io/solarssk/autodiscover` and pin by digest or semver tag in production.
+3. Set `TRUSTED_PROXY_IPS` (or `FORWARDED_ALLOW_IPS`) to the proxy/Docker CIDRs that may set `X-Forwarded-For` / `X-Real-IP` (e.g. `127.0.0.1,172.16.2.0/24`). Empty keeps legacy behavior (trust any peer).
+4. Keep `ALLOWED_DOMAINS` minimal — only domains you operate.
+5. Do not expose the container directly to the internet without TLS.
+6. Pull images from `ghcr.io/solarssk/autodiscover` and pin by digest or semver tag in production.
 
 ## Vulnerability disclosure
 

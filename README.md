@@ -117,7 +117,7 @@ https://autoconfig.example.com/mail/config-v1.1.xml
 https://autoconfig.example.com/.well-known/autoconfig/mail/config-v1.1.xml
 ```
 
-Set `TRUST_PROXY_HEADERS=true` only when the application runs behind a trusted reverse proxy (nginx, Caddy, Traefik). Otherwise the `X-Forwarded-For` header can be spoofed.
+Set `TRUST_PROXY_HEADERS=true` only when the application runs behind a trusted reverse proxy (nginx, Caddy, Traefik, NPM). Also set `TRUSTED_PROXY_IPS` (alias `FORWARDED_ALLOW_IPS`) to the proxy/Docker CIDRs that may set `X-Forwarded-For` / `X-Real-IP`, e.g. `127.0.0.1,172.16.2.0/24`. Otherwise clients can spoof forwarded headers and bypass rate limits.
 
 ## DNS
 
