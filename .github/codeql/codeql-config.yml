@@ -1,0 +1,11 @@
+name: mail-autodiscover CodeQL
+
+paths:
+  - app
+  - scripts
+  - tests
+  - .github/workflows
+
+query-filters:
+  - exclude:
+      id: py/unused-import
