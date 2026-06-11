@@ -69,7 +69,12 @@ def normalize_lines(lines: list[str]) -> list[str]:
 
 
 def format_summary_block(sections: OrderedDict[str, list[str]]) -> str:
-    lines: list[str] = []
+    labels = {
+        "What's new": "✨ What's new",
+        "What this means": "🎯 What this means",
+        "Action required": "🛠️ Action required",
+    }
+    lines = ["## At a glance", ""]
 
     for heading in SUMMARY_SECTIONS:
         content = normalize_lines(sections.get(heading, []))
@@ -77,7 +82,7 @@ def format_summary_block(sections: OrderedDict[str, list[str]]) -> str:
             content = ["- No action required."]
         if not content:
             continue
-        lines.append(f"## {heading}")
+        lines.append(f"### {labels[heading]}")
         lines.append("")
         lines.extend(content)
         lines.append("")
@@ -108,7 +113,7 @@ def docker_block(version: str, prerelease: bool) -> str:
     lines = [
         "---",
         "",
-        "## 🐳 Docker",
+        "## 🐳 Docker tags",
         "",
         "```text",
         f"{IMAGE}:{tag}",
@@ -122,7 +127,7 @@ def docker_block(version: str, prerelease: bool) -> str:
             "",
             "**Portainer / production:** pin the semver tag, not `latest`.",
             "",
-            "## 📚 Links",
+            "## 📚 Useful links",
             "",
             "- [Full CHANGELOG](https://github.com/solarssk/mail-autodiscover/blob/main/CHANGELOG.md)",
             "- [README](https://github.com/solarssk/mail-autodiscover)",
@@ -146,7 +151,7 @@ def build_release_notes(version: str, prerelease: bool = False) -> str:
 
     parts = [header, "", summary]
     if technical:
-        parts.extend(["", "## Technical details", "", technical])
+        parts.extend(["", "## 🔧 Technical details", "", technical])
     parts.extend(["", docker_block(version, prerelease)])
     return "\n".join(parts).strip() + "\n"
 
