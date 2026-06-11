@@ -16,6 +16,8 @@ Avoid `latest` for long-lived environments.
 
 Use [`docker-compose.ghcr.yml`](../docker-compose.ghcr.yml) as your starting point.
 
+The file is written to consume values from `.env` or from Portainer environment variables, so you can keep the stack file itself close to upstream defaults.
+
 Important values to review before deployment:
 
 - `PUBLIC_BASE_URL`

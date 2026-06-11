@@ -38,6 +38,8 @@ cp .env.example .env
 docker compose -f docker-compose.ghcr.yml up -d
 ```
 
+That compose file reads the values from your `.env`, so you do not need to edit `docker-compose.ghcr.yml` just to replace the example domains.
+
 For a local build:
 
 ```bash

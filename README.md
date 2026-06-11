@@ -77,6 +77,8 @@ cp .env.example .env
 docker compose -f docker-compose.ghcr.yml up -d
 ```
 
+The GHCR compose file reads the values you set in `.env` or in your Portainer environment settings.
+
 ## Wiki
 
 The wiki content is prepared in [`wiki/`](wiki/) as GitHub Wiki-ready pages:
