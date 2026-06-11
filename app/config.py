@@ -12,17 +12,23 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class UsernameFormat(StrEnum):
+    """How mail clients should present the mailbox username."""
+
     EMAIL = "email"
     LOCALPART = "localpart"
 
 
 class SocketType(StrEnum):
+    """Transport encryption mode for IMAP, SMTP, or POP3."""
+
     SSL = "SSL"
     STARTTLS = "STARTTLS"
     PLAIN = "plain"
 
 
 class Settings(BaseSettings):
+    """Environment-driven mail autodiscovery configuration."""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -131,6 +137,8 @@ class Settings(BaseSettings):
 
 
 class SettingsProvider(Protocol):
+    """Injectable source of application settings (for tests and DI)."""
+
     def get_settings(self) -> Settings: ...
 
 
@@ -143,4 +151,5 @@ class EnvSettingsProvider:
 
 @lru_cache
 def get_settings() -> Settings:
+    """Load and cache settings from the process environment."""
     return Settings()

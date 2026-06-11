@@ -2,6 +2,7 @@
 
 
 def landing_page_html(app_name: str) -> str:
+    """Render the public root page without exposing mail configuration."""
     title = _escape(app_name)
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -40,6 +41,7 @@ def landing_page_html(app_name: str) -> str:
 
 
 def robots_txt() -> str:
+    """Discourage indexing of the autodiscovery host."""
     return "User-agent: *\nDisallow: /\n"
 
 
