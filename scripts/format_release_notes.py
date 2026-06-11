@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Format CHANGELOG section into GitHub Release notes with emoji sections."""
+"""Format CHANGELOG sections into GitHub Release notes."""
 
 from __future__ import annotations
 
 import re
 import sys
+from collections import OrderedDict
 from pathlib import Path
 
 SECTION_EMOJI = {
@@ -16,6 +17,8 @@ SECTION_EMOJI = {
     "security": "🔒 Security",
     "note": "📝 Note",
 }
+
+SUMMARY_SECTIONS = ("What's new", "What this means", "Action required")
 
 ROOT = Path(__file__).resolve().parent.parent
 CHANGELOG = ROOT / "CHANGELOG.md"
@@ -32,35 +35,71 @@ def extract_section(changelog: str, version: str) -> str:
     if not match:
         msg = f"No CHANGELOG section found for version {version}"
         raise SystemExit(msg)
-    return match.group(1).strip()
+    section = match.group(1).strip()
+    section = re.sub(r"\n\[[^\n]+\]:\s+https?://[^\n]+", "", section, flags=re.MULTILINE)
+    return section.strip()
 
 
-def format_subsections(body: str) -> str:
-    lines: list[str] = []
+def parse_subsections(body: str) -> OrderedDict[str, list[str]]:
+    sections: OrderedDict[str, list[str]] = OrderedDict()
     current_heading: str | None = None
-    buffer: list[str] = []
-
-    def flush() -> None:
-        nonlocal current_heading, buffer
-        if current_heading is None:
-            return
-        emoji_heading = SECTION_EMOJI.get(current_heading.lower(), f"📌 {current_heading}")
-        lines.append(f"### {emoji_heading}")
-        lines.extend(buffer)
-        lines.append("")
-        current_heading = None
-        buffer = []
 
     for raw in body.splitlines():
         line = raw.rstrip()
         if line.startswith("### "):
-            flush()
             current_heading = line.removeprefix("### ").strip()
+            sections[current_heading] = []
             continue
-        if current_heading is not None:
-            buffer.append(line)
+        if current_heading is None:
+            continue
+        sections[current_heading].append(line)
 
-    flush()
+    return sections
+
+
+def normalize_lines(lines: list[str]) -> list[str]:
+    trimmed = [line.rstrip() for line in lines]
+
+    while trimmed and not trimmed[0]:
+        trimmed.pop(0)
+    while trimmed and not trimmed[-1]:
+        trimmed.pop()
+
+    return trimmed
+
+
+def format_summary_block(sections: OrderedDict[str, list[str]]) -> str:
+    lines: list[str] = []
+
+    for heading in SUMMARY_SECTIONS:
+        content = normalize_lines(sections.get(heading, []))
+        if not content and heading == "Action required":
+            content = ["- No action required."]
+        if not content:
+            continue
+        lines.append(f"## {heading}")
+        lines.append("")
+        lines.extend(content)
+        lines.append("")
+
+    return "\n".join(lines).strip()
+
+
+def format_technical_sections(sections: OrderedDict[str, list[str]]) -> str:
+    lines: list[str] = []
+
+    for heading, content in sections.items():
+        if heading in SUMMARY_SECTIONS:
+            continue
+        normalized = normalize_lines(content)
+        if not normalized:
+            continue
+        emoji_heading = SECTION_EMOJI.get(heading.lower(), f"📌 {heading}")
+        lines.append(f"### {emoji_heading}")
+        lines.append("")
+        lines.extend(normalized)
+        lines.append("")
+
     return "\n".join(lines).strip()
 
 
@@ -86,7 +125,8 @@ def docker_block(version: str, prerelease: bool) -> str:
             "## 📚 Links",
             "",
             "- [Full CHANGELOG](https://github.com/solarssk/autodiscover/blob/main/CHANGELOG.md)",
-            "- [README](https://github.com/solarssk/autodiscover#portainer--ghcr-recommended)",
+            "- [README](https://github.com/solarssk/autodiscover)",
+            "- [Wiki pages](https://github.com/solarssk/autodiscover/tree/main/wiki)",
             "- [.env.example](https://github.com/solarssk/autodiscover/blob/main/.env.example)",
         ]
     )
@@ -96,13 +136,18 @@ def docker_block(version: str, prerelease: bool) -> str:
 def build_release_notes(version: str, prerelease: bool = False) -> str:
     changelog = CHANGELOG.read_text(encoding="utf-8")
     body = extract_section(changelog, version)
-    formatted = format_subsections(body)
+    sections = parse_subsections(body)
+    summary = format_summary_block(sections)
+    technical = format_technical_sections(sections)
 
     header = f"## 🚀 mail-autodiscover v{version}"
     if prerelease:
         header += " (pre-release)"
 
-    parts = [header, "", formatted, "", docker_block(version, prerelease)]
+    parts = [header, "", summary]
+    if technical:
+        parts.extend(["", "## Technical details", "", technical])
+    parts.extend(["", docker_block(version, prerelease)])
     return "\n".join(parts).strip() + "\n"
 
 

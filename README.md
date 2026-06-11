@@ -1,32 +1,45 @@
 # mail-autodiscover
 
-A lightweight HTTP service for automatic mail client configuration (Outlook Autodiscover and Thunderbird Autoconfig) for self-hosted mail servers, especially **Synology MailPlus Server**.
+`mail-autodiscover` is a small HTTP service that helps mail clients configure themselves for your self-hosted mail server.
 
-## What this is not
+It is built for admins who run their own mail stack and want Outlook, Thunderbird, and Apple Mail to pick up the correct IMAP/SMTP settings automatically.
 
-- Not a mail server
-- Not a replacement for Synology MailPlus Server
-- Does not implement Exchange, EWS, or ActiveSync
-- Does not handle calendars or contacts
-- Does not verify whether a mailbox exists
+If you want to get started quickly, copy [`.env.example`](/Users/filipchochol/Documents/Projects/autodiscover/.env.example), review the values, and deploy with [`docker-compose.ghcr.yml`](/Users/filipchochol/Documents/Projects/autodiscover/docker-compose.ghcr.yml). The rest of the documentation is split into focused wiki pages instead of one long README.
 
-## How it works
+## Is this for me?
 
-A mail client (Outlook, Thunderbird) sends a request to the autodiscover/autoconfig endpoint. The service returns XML with IMAP/SMTP settings based on environment variable configuration.
+Use this project if:
 
-For every syntactically valid address `@allowed-domain`, the **same configuration** is returned — with no account existence check.
+- you run your own mail server,
+- you want automatic client configuration for your users,
+- you are happy to provide the same configuration for every valid email address in your allowed domains,
+- you want a small service with environment-based configuration.
 
-## Security model
+This project is not for you if:
 
-- **No mailbox enumeration** — the service does not connect to Synology API, LDAP, or IMAP
-- **No email address logging** — logs contain only `request_id`, endpoint, status, and `domain_allowed=true/false`
-- **Rate limiting** — in-memory, per IP (`RATE_LIMIT_PER_MINUTE`)
-- **Safe XML parsing** — `defusedxml`, request body size limit
-- **Security headers** — `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Cache-Control: no-store`
-- **No admin panel in MVP** — configuration via ENV only
-- **No public domain list** — the `/` endpoint does not expose hosts or domains
+- you need a mail server, webmail, or an admin panel,
+- you need mailbox existence checks,
+- you need Exchange, EWS, ActiveSync, calendars, or contacts,
+- you want per-user or per-mailbox dynamic logic.
 
-## Quick start
+## What it does
+
+The service exposes standard autodiscovery endpoints used by mail clients:
+
+- Outlook Autodiscover
+- Thunderbird Autoconfig
+- Apple Mail `.mobileconfig` profiles
+
+When a client asks for settings, the service returns IMAP/SMTP details from your environment variables. It does not log full email addresses and it does not check whether a mailbox exists.
+
+## Quick start for admins
+
+1. Copy [`.env.example`](/Users/filipchochol/Documents/Projects/autodiscover/.env.example) to `.env`.
+2. Set your public URL, allowed domains, and IMAP/SMTP hostnames.
+3. Deploy with Docker Compose or Portainer.
+4. Put the service behind HTTPS and configure your reverse proxy.
+5. Point `autodiscover.` and `autoconfig.` DNS records to your proxy.
+6. Test the endpoints before sharing them with users.
 
 ### Example `.env`
 
@@ -44,38 +57,93 @@ SMTP_HOST=mail.example.com
 SMTP_PORT=587
 SMTP_SOCKET_TYPE=STARTTLS
 USERNAME_FORMAT=email
+TRUST_PROXY_HEADERS=true
+TRUSTED_PROXY_IPS=127.0.0.1,10.0.0.0/8
 ```
 
-Full list of variables: [.env.example](.env.example)
+### Docker / Portainer
 
-### Docker Compose (build locally)
-
-```bash
-cp .env.example .env
-# edit .env as needed
-docker compose up -d --build
-```
-
-### Portainer / GHCR (recommended)
-
-Pre-built images are published to GitHub Container Registry on every push to `main` and on version tags (`v*`):
+Prebuilt images are published to GHCR:
 
 ```text
 ghcr.io/solarssk/autodiscover:latest
-ghcr.io/solarssk/autodiscover:<git-sha>
 ghcr.io/solarssk/autodiscover:0.2.0
 ```
 
-See [`docker-compose.ghcr.yml`](docker-compose.ghcr.yml) for a full Portainer-ready stack with inline environment placeholders.
+Use a pinned version in production rather than `latest`.
 
-1. Make the GHCR package **public** (first time): GitHub → Packages → `autodiscover` → Package settings → Change visibility.
-2. In Portainer: Stacks → Add stack → paste from `docker-compose.ghcr.yml` → set your domains and mail hosts.
-3. Pin a semver tag in production (`0.2.0`) instead of `latest`.
-4. Set `TRUSTED_PROXY_IPS` to your reverse-proxy / Docker bridge CIDRs (see below).
+```bash
+cp .env.example .env
+docker compose -f docker-compose.ghcr.yml up -d
+```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for release workflow.
+## Wiki
 
-### Local (without Docker)
+The wiki content is prepared in [`wiki/`](/Users/filipchochol/Documents/Projects/autodiscover/wiki) as GitHub Wiki-ready pages:
+
+- [`Home`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Home.md)
+- [`What This Project Does`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/What-This-Project-Does.md)
+- [`Quick Start`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Quick-Start.md)
+- [`Deployment with Docker or Portainer`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Deployment-with-Docker-or-Portainer.md)
+- [`Reverse Proxy and DNS`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Reverse-Proxy-and-DNS.md)
+- [`Client Setup`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Client-Setup-Outlook-Thunderbird-Apple-Mail.md)
+- [`Configuration Reference`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Configuration-Reference.md)
+- [`Upgrade Guide`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Upgrade-Guide.md)
+- [`Security Model`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Security-Model.md)
+- [`Troubleshooting`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Troubleshooting.md)
+
+## End-user setup
+
+Your users do not need to know how Autodiscover works. They only need the correct address or profile URL.
+
+### Outlook
+
+1. Open Outlook and add the mailbox address.
+2. Enter the password when asked.
+3. If Autodiscover is reachable and the domain is allowed, Outlook should fill in the server settings automatically.
+
+### Thunderbird
+
+1. Open account setup in Thunderbird.
+2. Enter the name, email address, and password.
+3. Thunderbird should fetch settings from `/mail/config-v1.1.xml` or the `.well-known` alias.
+
+### Apple Mail
+
+Open this URL in Safari and replace the domain and address:
+
+```text
+https://autodiscover.example.com/mail/ios.mobileconfig?emailaddress=user@example.com
+```
+
+Then install the downloaded profile and enter the mailbox password when prompted.
+
+## Endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/health` | Health check for monitoring |
+| `GET` | `/` | Simple landing page with no sensitive configuration |
+| `GET` | `/robots.txt` | Tells crawlers not to index the host |
+| `GET` | `/mail/config-v1.1.xml?emailaddress=...` | Thunderbird Autoconfig |
+| `GET` | `/.well-known/autoconfig/mail/config-v1.1.xml?emailaddress=...` | Thunderbird alias |
+| `GET` | `/mail/ios.mobileconfig?emailaddress=...` | Apple Mail profile |
+| `GET` | `/.well-known/apple-mail.mobileconfig?emailaddress=...` | Apple Mail alias |
+| `POST` | `/autodiscover/autodiscover.xml` | Outlook Autodiscover |
+| `GET` | `/autodiscover/autodiscover.xml` | Neutral Outlook response |
+
+## Security at a glance
+
+- No mailbox enumeration
+- No full email address logging
+- In-memory rate limiting per IP
+- Safe XML parsing
+- Security headers enabled by default
+- No admin panel in the current version
+
+For the detailed security model, see [`SECURITY.md`](/Users/filipchochol/Documents/Projects/autodiscover/SECURITY.md) and the wiki page [`Security Model`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Security-Model.md).
+
+## Local development
 
 ```bash
 python3 -m venv .venv
@@ -85,121 +153,13 @@ cp .env.example .env
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --reload
 ```
 
-## Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Healthcheck |
-| `GET` | `/` | Minimal HTML landing (no configuration exposed) |
-| `GET` | `/robots.txt` | `Disallow: /` for crawlers |
-| `GET` | `/mail/config-v1.1.xml?emailaddress=...` | Thunderbird Autoconfig |
-| `GET` | `/.well-known/autoconfig/mail/config-v1.1.xml?emailaddress=...` | Thunderbird (well-known) |
-| `GET` | `/mail/ios.mobileconfig?emailaddress=...` | Apple Mail configuration profile |
-| `GET` | `/.well-known/apple-mail.mobileconfig?emailaddress=...` | Apple Mail (well-known alias) |
-| `POST` | `/autodiscover/autodiscover.xml` | Outlook Autodiscover |
-| `GET` | `/autodiscover/autodiscover.xml` | Neutral Outlook response |
-
-### Apple Mail (iPhone / iPad / Mac)
-
-Open in **Safari** (replace domain and email):
-
-```text
-https://autodiscover.example.com/mail/ios.mobileconfig?emailaddress=user@example.com
-```
-
-Install the downloaded profile in **Settings**. Enter your mail password when prompted. Unsigned profiles show an Apple verification warning — expected for self-hosted setups without MDM signing.
-
-## Reverse proxy
-
-Route traffic to the container:
-
-```text
-https://autodiscover.example.com/autodiscover/autodiscover.xml
-https://autoconfig.example.com/mail/config-v1.1.xml
-https://autoconfig.example.com/.well-known/autoconfig/mail/config-v1.1.xml
-```
-
-Set `TRUST_PROXY_HEADERS=true` only when the application runs behind a trusted reverse proxy (nginx, Caddy, Traefik, NPM).
-
-When using a reverse proxy, also set `TRUSTED_PROXY_IPS` (alias `FORWARDED_ALLOW_IPS`) to **your** proxy or Docker bridge CIDRs — comma-separated IPs or networks. Each deployment is different; use `docker network inspect <network>` or check the access log `client_ip` vs direct peer. Allow that subnet plus `127.0.0.1` if the proxy runs on the same host. If `TRUSTED_PROXY_IPS` is empty, legacy behavior applies (trust any peer).
-
-On Cloudflare + NPM, configure `real_ip_header CF-Connecting-IP` and Cloudflare IP ranges in NPM so the container receives a correct `X-Forwarded-For`.
-
-## DNS
-
-Example records:
-
-```text
-autodiscover.example.com  CNAME  proxy.example.com
-autoconfig.example.com    CNAME  proxy.example.com
-mail.example.com          A/CNAME  <mail server>
-```
-
-Optional SRV records:
-
-```text
-_imaps._tcp.example.com.       SRV 0 1 993 mail.example.com.
-_submission._tcp.example.com.  SRV 0 1 587 mail.example.com.
-```
-
-## Testing (curl)
-
-### Thunderbird
+## Quality checks
 
 ```bash
-curl "http://localhost:8088/mail/config-v1.1.xml?emailaddress=user@example.com"
-```
-
-### Outlook
-
-```bash
-curl -X POST "http://localhost:8088/autodiscover/autodiscover.xml" \
-  -H "Content-Type: text/xml" \
-  --data '<?xml version="1.0" encoding="utf-8"?><Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/outlook/requestschema/2006"><Request><EMailAddress>user@example.com</EMailAddress><AcceptableResponseSchema>http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a</AcceptableResponseSchema></Request></Autodiscover>'
-```
-
-## Tests
-
-```bash
-pip install ".[dev]"
-pytest -v          # includes coverage gate (≥90%)
 ruff check .
+pytest -v
 mypy app
 bandit -r app -ll -c pyproject.toml
 ```
 
-CI runs on every pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Roadmap
-
-### v0.1 (MVP)
-
-- ENV-based configuration
-- Outlook Autodiscover
-- Thunderbird Autoconfig
-- Docker + Docker Compose
-- Tests + GitHub Actions CI
-
-### v0.2 (released)
-
-- `TRUSTED_PROXY_IPS`, unified access logging, landing page, Apple `.mobileconfig`
-- (Deferred) per-domain IMAP/SMTP hosts, Redis rate limiting
-
-### v0.3
-
-- Admin panel
-- Database
-- OIDC login via Authentik
-- Admin/viewer roles
-- Configuration change audit log
-
-### v0.4
-
-- SAML/OIDC hardening
-- Backup/restore config
-- Import/export config
-- Docker image published to GHCR
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+Developer workflow and release process live in [`CONTRIBUTING.md`](/Users/filipchochol/Documents/Projects/autodiscover/CONTRIBUTING.md).
