@@ -56,6 +56,29 @@ def test_mobileconfig_wellknown_alias() -> None:
     assert response.status_code == 200
 
 
+def test_mobileconfig_stable_identifiers() -> None:
+    settings = make_settings()
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as client:
+        first = client.get(
+            "/mail/ios.mobileconfig",
+            params={"emailaddress": "user@example.com"},
+        )
+        second = client.get(
+            "/mail/ios.mobileconfig",
+            params={"emailaddress": "user@example.com"},
+        )
+
+    profile_a = plistlib.loads(first.content)
+    profile_b = plistlib.loads(second.content)
+    assert profile_a["PayloadUUID"] == profile_b["PayloadUUID"]
+    assert profile_a["PayloadIdentifier"] == profile_b["PayloadIdentifier"]
+    mail_a = profile_a["PayloadContent"][0]
+    mail_b = profile_b["PayloadContent"][0]
+    assert mail_a["PayloadUUID"] == mail_b["PayloadUUID"]
+    assert mail_a["PayloadIdentifier"] == mail_b["PayloadIdentifier"]
+
+
 def test_mobileconfig_disabled() -> None:
     settings = make_settings(apple_mobileconfig_enabled=False)
     app = create_app(FixedSettingsProvider(settings))

@@ -34,7 +34,7 @@ All changes to `main` must go through a **pull request**. Direct pushes to `main
 | Tests and coverage | `pytest` with ≥90% coverage on `app/` |
 | Type check (mypy) | Static typing on `app/` |
 | Security (bandit + pip-audit) | Code and dependency security |
-| Docker build and scan | Image build + Trivy SARIF upload |
+| Docker build and scan | Image build + Trivy scan (blocks CRITICAL on PR; advisory SARIF upload on `main`) |
 
 ## Labels
 
