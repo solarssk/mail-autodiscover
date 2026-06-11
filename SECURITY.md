@@ -2,7 +2,7 @@
 
 This document is for maintainers and admins who need the detailed security model behind `mail-autodiscover`.
 
-If you are looking for setup help, start with [`README.md`](README.md) and the wiki pages in [`wiki/`](wiki/).
+If you are looking for setup help, start with [`README.md`](README.md) and the [GitHub Wiki](https://github.com/solarssk/autodiscover/wiki).
 
 ## What this service is allowed to do
 
