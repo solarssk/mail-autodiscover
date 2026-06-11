@@ -177,6 +177,7 @@ See [SECURITY.md](SECURITY.md) for the detailed trust model.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install ".[dev]"
+pre-commit install
 cp .env.example .env
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --reload
 ```
@@ -185,9 +186,12 @@ For development with placeholder values, set `APP_ENV=test` or `APP_ENV=developm
 
 ## Quality Checks
 
+Run the same Python checks as GitHub CI:
+
 ```bash
-ruff check .
-pytest -v
-mypy app
-bandit -r app -ll -c pyproject.toml
+./scripts/check.sh
 ```
+
+`pre-commit install` also runs `ruff`, `mypy`, and `pytest` automatically before each commit.
+
+Developer workflow and release process live in [`CONTRIBUTING.md`](CONTRIBUTING.md).
