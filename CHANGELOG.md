@@ -16,7 +16,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Action required
 
-- No action required.
+- New deployments should pull `ghcr.io/solarssk/mail-autodiscover` instead of the old `autodiscover` package path.
+- Pin `IMAGE_TAG` to a semver tag in production; compose defaults to `latest` until you choose a release tag.
 
 ### Changed
 

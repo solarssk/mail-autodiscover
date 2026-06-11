@@ -70,7 +70,7 @@ ghcr.io/solarssk/mail-autodiscover:latest
 ghcr.io/solarssk/mail-autodiscover:0.2.0
 ```
 
-Use a pinned version in production rather than `latest`.
+`docker-compose.ghcr.yml` defaults to `latest`, which is published on every `main` build. Set `IMAGE_TAG` in `.env` or Portainer to a pinned semver tag in production.
 
 ```bash
 cp .env.example .env
