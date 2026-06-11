@@ -6,24 +6,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-11
+
 ### What's new
 
-- Release automation now uses the repository CodeQL workflow instead of GitHub's default setup.
+- The project now lives at `mail-autodiscover`, with GHCR images published only under `ghcr.io/solarssk/mail-autodiscover`.
+- Documentation moved to the GitHub Wiki, and the public Python API is now documented with module docstrings.
 
 ### What this means
 
-- Security scanning is configured in-repo and easier to review alongside the rest of the CI configuration.
+- New installs have one canonical repository and container image name.
+- Admins follow wiki links from the README instead of the removed in-repo `wiki/` folder.
 
 ### Action required
 
-- New deployments should pull `ghcr.io/solarssk/mail-autodiscover` instead of the old `autodiscover` package path.
-- Pin `IMAGE_TAG` to a semver tag in production; compose defaults to `latest` until you choose a release tag.
+- Pull `ghcr.io/solarssk/mail-autodiscover` instead of the retired `ghcr.io/solarssk/autodiscover` package path.
+- Pin `IMAGE_TAG=0.2.1` (or newer) in production rather than the old `autodiscover` image tags.
 
 ### Changed
 
 - GitHub repository renamed to `mail-autodiscover`; GHCR images publish as `ghcr.io/solarssk/mail-autodiscover`
 - Documentation now links to the GitHub Wiki instead of the in-repo `wiki/` folder
 - Replace flaky GitHub CodeQL default setup with explicit `.github/workflows/codeql.yml`
+- Add docstrings across the `app/` package for public API and security helpers
 
 ## [0.2.0] - 2026-06-10
 
@@ -134,8 +139,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.2.0
+[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.2.1
+[0.2.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.0...v0.2.1
 [0.1.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.1.2...v0.2.0
 [0.1.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.1.1...v0.1.2
 [0.1.0]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.1.0
