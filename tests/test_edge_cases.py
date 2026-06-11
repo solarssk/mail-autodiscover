@@ -118,6 +118,38 @@ def test_get_client_ip_ignores_forwarded_header_from_untrusted_peer() -> None:
     assert get_client_ip(FakeRequest(), settings) == "203.0.113.99"  # type: ignore[arg-type]
 
 
+def test_get_client_ip_ignores_forwarded_when_no_trusted_ips() -> None:
+    settings = make_settings(
+        trust_proxy_headers=True,
+        trusted_proxy_ips="",
+    )
+
+    class FakeClient:
+        host = "203.0.113.99"
+
+    class FakeRequest:
+        headers = {"X-Forwarded-For": "1.2.3.4"}
+        client = FakeClient()
+
+    assert get_client_ip(FakeRequest(), settings) == "203.0.113.99"  # type: ignore[arg-type]
+
+
+def test_get_client_ip_ignores_invalid_forwarded_header() -> None:
+    settings = make_settings(
+        trust_proxy_headers=True,
+        trusted_proxy_ips="127.0.0.1/32",
+    )
+
+    class FakeClient:
+        host = "127.0.0.1"
+
+    class FakeRequest:
+        headers = {"X-Forwarded-For": "not-an-ip"}
+        client = FakeClient()
+
+    assert get_client_ip(FakeRequest(), settings) == "127.0.0.1"  # type: ignore[arg-type]
+
+
 def test_get_client_ip_uses_x_real_ip_when_peer_trusted() -> None:
     settings = make_settings(
         trust_proxy_headers=True,

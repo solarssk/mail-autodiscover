@@ -100,7 +100,7 @@ jobs:
           output: trivy-results.sarif
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          exit-code: "0"
+          exit-code: ${{ github.event_name == 'pull_request' && '1' || '0' }}
         env:
           TRIVY_CACHE_DIR: /tmp/trivy-cache
 

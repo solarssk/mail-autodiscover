@@ -6,6 +6,46 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-06-12
+
+### What's new
+
+- Production deployments now fail fast on unsafe placeholder configuration instead of starting with `example.com` defaults.
+- Reverse-proxy trust is safer by default: forwarded headers require explicit trusted proxy CIDRs.
+
+### What this means
+
+- Misconfigured production stacks surface a clear startup error instead of silently serving placeholder mail settings.
+- Rate limiting uses a bounded in-memory store with periodic cleanup, reducing memory growth under abuse.
+
+### Action required
+
+- If you run behind a reverse proxy with `TRUST_PROXY_HEADERS=true`, set `TRUSTED_PROXY_IPS` to your proxy or Docker bridge CIDRs before upgrading to `0.2.2` in production.
+- Review reverse-proxy access logs: Thunderbird and Apple Mail endpoints pass `emailaddress` in the query string.
+
+### Security
+
+- Default `TRUST_PROXY_HEADERS` changed to `false`; empty `TRUSTED_PROXY_IPS` no longer trusts all peers.
+- `X-Forwarded-For` and `X-Real-IP` values are validated as real IP addresses before use.
+- Production startup validation for HTTPS `PUBLIC_BASE_URL`, real domains, and proxy trust settings.
+
+### Added
+
+- `RATE_LIMIT_MAX_CLIENTS` and `RATE_LIMIT_CLEANUP_INTERVAL_SECONDS` for bounded rate-limit storage.
+- Stable UUIDv5 identifiers in Apple `.mobileconfig` profiles (re-download updates the same profile).
+- Healthcheck in `docker-compose.ghcr.yml`.
+
+### Changed
+
+- `TRUST_PROXY_HEADERS` default is now `false` in application config, `.env.example`, and GHCR compose.
+- Trivy blocks CRITICAL vulnerabilities on pull requests; `main` keeps advisory SARIF upload.
+
+### Fixed
+
+- `docker-compose.ghcr.yml` port mapping now respects `CONTAINER_PORT`.
+- Apple `.mobileconfig` `PayloadIdentifier` values are account-specific so multiple mailboxes on one domain do not collide.
+- `docker-compose.ghcr.yml` default `IMAGE_TAG` matches the release version (`0.2.2`).
+
 ## [0.2.1] - 2026-06-11
 
 ### What's new

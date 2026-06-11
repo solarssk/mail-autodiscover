@@ -65,7 +65,7 @@ There is no admin API in the current version. All configuration is supplied thro
 - Safe XML parsing with `defusedxml`
 - Request body size limit
 - XML output escaping
-- Rate limiting per IP with `RATE_LIMIT_PER_MINUTE`
+- Rate limiting per IP with `RATE_LIMIT_PER_MINUTE` and bounded in-memory storage
 - Security headers such as `nosniff`, `no-referrer`, `DENY`, and `no-store`
 - Neutral error responses that do not expose your domain list
 - Non-root container user
@@ -79,6 +79,19 @@ There is no admin API in the current version. All configuration is supplied thro
 4. Keep `ALLOWED_DOMAINS` limited to domains you actually operate.
 5. Do not expose the container directly to the public internet without TLS.
 6. In production, pin GHCR images by semver tag or digest instead of using `latest`.
+7. With `APP_ENV=production`, the service refuses to start on placeholder values (`example.com`, `mail.example.com`, `http://localhost`, missing `TRUSTED_PROXY_IPS` when proxy trust is on).
+
+## Reverse proxy logging
+
+Thunderbird Autoconfig and Apple Mail profile URLs include `?emailaddress=user@example.com` in the query string. Mail clients require this parameter.
+
+This service does not log full email addresses, but your reverse proxy may log the full request URI unless you configure it otherwise. Review access-log settings for paths such as `/mail/config-v1.1.xml`, `/.well-known/autoconfig/`, and `/mail/ios.mobileconfig`.
+
+## Apple Mail profiles
+
+`.mobileconfig` profiles are generated without a code-signing certificate. iOS and macOS warn that the profile is unsigned before installation. That is expected for self-hosted mail setup.
+
+Profile identifiers are stable per domain so users can re-download and update the same profile instead of accumulating duplicates.
 
 ## What not to add casually
 

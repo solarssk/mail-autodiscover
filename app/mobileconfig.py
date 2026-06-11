@@ -9,6 +9,7 @@ from app.config import Settings, SocketType
 from app.email_utils import ValidatedEmail, build_username
 
 MOBILECONFIG_CONTENT_TYPE = "application/x-apple-aspen-config; charset=utf-8"
+_PROFILE_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "https://github.com/solarssk/mail-autodiscover")
 
 
 def _use_ssl(socket_type: SocketType) -> bool:
@@ -19,13 +20,26 @@ def _use_ssl(socket_type: SocketType) -> bool:
 def apple_mail_mobileconfig(validated: ValidatedEmail, settings: Settings) -> bytes:
     """Build unsigned com.apple.mail.managed configuration profile (no passwords)."""
     username = build_username(validated, settings.username_format)
-    mail_uuid = str(uuid.uuid4()).upper()
-    root_uuid = str(uuid.uuid4()).upper()
+    mail_uuid = str(
+        uuid.uuid5(
+            _PROFILE_NAMESPACE,
+            f"{validated.email}:{settings.imap_host}:{settings.smtp_host}",
+        )
+    ).upper()
+    root_uuid = str(
+        uuid.uuid5(
+            _PROFILE_NAMESPACE,
+            f"profile:{validated.email}:{settings.imap_host}",
+        )
+    ).upper()
+    account_id = uuid.uuid5(_PROFILE_NAMESPACE, validated.email).hex
+    mail_identifier = f"com.mail-autodiscover.mail.{validated.domain}.{account_id}"
+    root_identifier = f"com.mail-autodiscover.profile.{validated.domain}.{account_id}"
 
     mail_payload: dict[str, object] = {
         "PayloadType": "com.apple.mail.managed",
         "PayloadVersion": 1,
-        "PayloadIdentifier": f"com.mail-autodiscover.mail.{mail_uuid}",
+        "PayloadIdentifier": mail_identifier,
         "PayloadUUID": mail_uuid,
         "PayloadDisplayName": settings.mail_display_name,
         "EmailAccountDescription": settings.mail_display_name,
@@ -48,7 +62,7 @@ def apple_mail_mobileconfig(validated: ValidatedEmail, settings: Settings) -> by
     profile: dict[str, object] = {
         "PayloadType": "Configuration",
         "PayloadVersion": 1,
-        "PayloadIdentifier": f"com.mail-autodiscover.profile.{root_uuid}",
+        "PayloadIdentifier": root_identifier,
         "PayloadUUID": root_uuid,
         "PayloadDisplayName": settings.mail_display_name,
         "PayloadDescription": "Mail account settings for Apple Mail",

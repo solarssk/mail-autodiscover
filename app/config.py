@@ -7,8 +7,12 @@ from enum import StrEnum
 from functools import lru_cache
 from typing import Protocol
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_MAX_REQUEST_BODY_BYTES = 1_048_576
+_PLACEHOLDER_IMAP_HOST = "mail.example.com"
+_PLACEHOLDER_SMTP_HOST = "mail.example.com"
 
 
 class UsernameFormat(StrEnum):
@@ -59,7 +63,7 @@ class Settings(BaseSettings):
 
     container_port: int = Field(default=8000, alias="CONTAINER_PORT")
 
-    trust_proxy_headers: bool = Field(default=True, alias="TRUST_PROXY_HEADERS")
+    trust_proxy_headers: bool = Field(default=False, alias="TRUST_PROXY_HEADERS")
     trusted_proxy_ips: str = Field(
         default="",
         validation_alias=AliasChoices("TRUSTED_PROXY_IPS", "FORWARDED_ALLOW_IPS"),
@@ -69,6 +73,10 @@ class Settings(BaseSettings):
     max_request_body_bytes: int = Field(default=16384, alias="MAX_REQUEST_BODY_BYTES")
     rate_limit_enabled: bool = Field(default=True, alias="RATE_LIMIT_ENABLED")
     rate_limit_per_minute: int = Field(default=60, alias="RATE_LIMIT_PER_MINUTE")
+    rate_limit_max_clients: int = Field(default=10000, alias="RATE_LIMIT_MAX_CLIENTS")
+    rate_limit_cleanup_interval_seconds: int = Field(
+        default=300, alias="RATE_LIMIT_CLEANUP_INTERVAL_SECONDS"
+    )
 
     pop3_enabled: bool = Field(default=False, alias="POP3_ENABLED")
     pop3_host: str = Field(default="mail.example.com", alias="POP3_HOST")
@@ -112,7 +120,7 @@ class Settings(BaseSettings):
     def trusted_proxy_networks(
         self,
     ) -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
-        """Parsed CIDR/IP entries from TRUSTED_PROXY_IPS (empty = trust any peer when enabled)."""
+        """Parsed CIDR/IP entries from TRUSTED_PROXY_IPS."""
         entries: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
         for part in self.trusted_proxy_ips.split(","):
             token = part.strip()
@@ -134,6 +142,61 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return value.upper() if value.lower() != "plain" else "plain"
         return value
+
+    @model_validator(mode="after")
+    def validate_production_settings(self) -> Settings:
+        """Reject unsafe placeholder configuration when APP_ENV is production."""
+        if self.app_env.lower() != "production":
+            return self
+
+        errors: list[str] = []
+
+        if self.trust_proxy_headers:
+            if not self.trusted_proxy_ips.strip():
+                errors.append(
+                    "TRUST_PROXY_HEADERS=true requires non-empty TRUSTED_PROXY_IPS in production"
+                )
+            elif not self.trusted_proxy_networks:
+                errors.append(
+                    "TRUSTED_PROXY_IPS contains no valid CIDR or IP entries in production"
+                )
+
+        domains = self.allowed_domains_set
+        if not domains or domains == frozenset({"example.com"}):
+            errors.append(
+                "ALLOWED_DOMAINS must be set to your real domain(s) in production "
+                "(not example.com)"
+            )
+
+        if (
+            self.imap_host == _PLACEHOLDER_IMAP_HOST
+            and self.smtp_host == _PLACEHOLDER_SMTP_HOST
+        ):
+            errors.append(
+                "IMAP_HOST and SMTP_HOST still use placeholder mail.example.com in production"
+            )
+
+        base_url = self.public_base_url.lower()
+        if "localhost" in base_url:
+            errors.append("PUBLIC_BASE_URL must not use localhost in production")
+        if not base_url.startswith("https://"):
+            errors.append("PUBLIC_BASE_URL must use https:// in production")
+
+        if self.rate_limit_enabled and self.rate_limit_per_minute <= 0:
+            errors.append(
+                "RATE_LIMIT_PER_MINUTE must be greater than 0 when rate limiting is enabled"
+            )
+
+        if self.max_request_body_bytes <= 0:
+            errors.append("MAX_REQUEST_BODY_BYTES must be greater than 0")
+        elif self.max_request_body_bytes > _MAX_REQUEST_BODY_BYTES:
+            errors.append(
+                f"MAX_REQUEST_BODY_BYTES must not exceed {_MAX_REQUEST_BODY_BYTES} in production"
+            )
+
+        if errors:
+            raise ValueError("; ".join(errors))
+        return self
 
 
 class SettingsProvider(Protocol):

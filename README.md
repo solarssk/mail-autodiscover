@@ -61,16 +61,18 @@ TRUST_PROXY_HEADERS=true
 TRUSTED_PROXY_IPS=127.0.0.1,10.0.0.0/8
 ```
 
+Behind a reverse proxy, set `TRUST_PROXY_HEADERS=true` and list your proxy or Docker bridge CIDRs in `TRUSTED_PROXY_IPS`. In production both are required together; the service refuses to start with proxy trust enabled but no trusted networks.
+
 ### Docker / Portainer
 
 Prebuilt images are published to GHCR:
 
 ```text
 ghcr.io/solarssk/mail-autodiscover:latest
-ghcr.io/solarssk/mail-autodiscover:0.2.1
+ghcr.io/solarssk/mail-autodiscover:0.2.2
 ```
 
-`latest` is published on every `main` build. Prefer a pinned semver tag such as `0.2.1` in production. `docker-compose.ghcr.yml` defaults to `0.2.1`; override `IMAGE_TAG` in `.env` or Portainer when needed.
+`latest` is published on every `main` build. Prefer a pinned semver tag such as `0.2.2` in production. `docker-compose.ghcr.yml` defaults to `0.2.2`; override `IMAGE_TAG` in `.env` or Portainer when needed.
 
 ```bash
 cp .env.example .env
@@ -120,6 +122,8 @@ https://autodiscover.example.com/mail/ios.mobileconfig?emailaddress=user@example
 
 Then install the downloaded profile and enter the mailbox password when prompted.
 
+The profile is **unsigned**. iOS and macOS show a warning before installation — that is expected for self-hosted configuration profiles. Re-downloading the same URL updates the existing profile because identifiers are stable per domain.
+
 ## Endpoints
 
 | Method | Path | Purpose |
@@ -133,6 +137,8 @@ Then install the downloaded profile and enter the mailbox password when prompted
 | `GET` | `/.well-known/apple-mail.mobileconfig?emailaddress=...` | Apple Mail alias |
 | `POST` | `/autodiscover/autodiscover.xml` | Outlook Autodiscover |
 | `GET` | `/autodiscover/autodiscover.xml` | Neutral Outlook response |
+
+Thunderbird and Apple Mail endpoints pass `emailaddress` in the query string (standard client behavior). Configure your reverse proxy so it does not log full query strings on autoconfig paths — otherwise the email address may appear in nginx, Caddy, NPM, or Cloudflare access logs even though this service does not log it.
 
 ## Security at a glance
 
@@ -152,6 +158,8 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install ".[dev]"
 cp .env.example .env
+# Use development locally with placeholder values; production requires real domains and HTTPS.
+export APP_ENV=development
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --reload
 ```
 
