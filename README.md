@@ -151,17 +151,19 @@ For the detailed security model, see [`SECURITY.md`](SECURITY.md) and the wiki p
 python3 -m venv .venv
 source .venv/bin/activate
 pip install ".[dev]"
+pre-commit install
 cp .env.example .env
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --reload
 ```
 
 ## Quality checks
 
+Run the same Python checks as GitHub CI:
+
 ```bash
-ruff check .
-pytest -v
-mypy app
-bandit -r app -ll -c pyproject.toml
+./scripts/check.sh
 ```
+
+`pre-commit install` also runs `ruff`, `mypy`, and `pytest` automatically before each commit.
 
 Developer workflow and release process live in [`CONTRIBUTING.md`](CONTRIBUTING.md).

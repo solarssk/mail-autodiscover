@@ -13,17 +13,23 @@ All changes to `main` must go through a **pull request**. Direct pushes to `main
    git checkout -b feat/your-change
    ```
 2. Make your changes and add tests where relevant.
-3. Run checks locally:
+3. Install dev tools once:
    ```bash
    pip install ".[dev]"
-   ruff check .
-   pytest -v
-   mypy app
-   bandit -r app -ll -c pyproject.toml
+   pre-commit install
    ```
-4. Open a pull request against `main`.
-5. Wait for all CI checks to pass.
-6. Merge when ready (squash merge is fine).
+   After that, `ruff`, `mypy`, and `pytest` run automatically before each `git commit`.
+4. Before pushing, run the full local CI mirror (optional but recommended):
+   ```bash
+   ./scripts/check.sh
+   ```
+   Skip slower dependency scans when needed:
+   ```bash
+   SKIP_PIP_AUDIT=1 SKIP_DEPTRY=1 ./scripts/check.sh
+   ```
+5. Open a pull request against `main`.
+6. Wait for all CI checks to pass.
+7. Merge when ready (squash merge is fine).
 
 ## CI checks
 
