@@ -12,6 +12,7 @@ MOBILECONFIG_CONTENT_TYPE = "application/x-apple-aspen-config; charset=utf-8"
 
 
 def _use_ssl(socket_type: SocketType) -> bool:
+    """Return whether Apple Mail should enable SSL for the given socket type."""
     return socket_type in (SocketType.SSL, SocketType.STARTTLS)
 
 

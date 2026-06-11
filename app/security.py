@@ -33,6 +33,7 @@ def _ip_in_trusted_networks(
     ip_str: str,
     networks: tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...],
 ) -> bool:
+    """Return whether an IP address falls within any configured proxy network."""
     try:
         ip = ipaddress.ip_address(ip_str)
     except ValueError:
@@ -41,6 +42,7 @@ def _ip_in_trusted_networks(
 
 
 def _should_trust_forwarded_headers(request: Request, settings: Settings) -> bool:
+    """Decide if X-Forwarded-For may be used based on proxy trust settings."""
     if not settings.trust_proxy_headers:
         return False
     networks = settings.trusted_proxy_networks
@@ -53,6 +55,7 @@ def _should_trust_forwarded_headers(request: Request, settings: Settings) -> boo
 
 
 def get_client_ip(request: Request, settings: Settings) -> str:
+    """Resolve client IP, honoring forwarded headers only from trusted proxies."""
     if _should_trust_forwarded_headers(request, settings):
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
@@ -67,18 +70,22 @@ def get_client_ip(request: Request, settings: Settings) -> str:
 
 
 def hash_domain(domain: str) -> str:
+    """Return a short stable hash of a domain for privacy-safe access logs."""
     return hashlib.sha256(domain.encode()).hexdigest()[:12]
 
 
 def should_skip_rate_limit(path: str) -> bool:
+    """Return whether the path is exempt from per-IP rate limiting."""
     return path == "/health"
 
 
 def should_skip_access_log(path: str, settings: Settings) -> bool:
+    """Return whether the path should be omitted from access logs."""
     return path in settings.access_log_skip_paths_set
 
 
 def is_rate_limited(client_ip: str, settings: Settings) -> bool:
+    """Track request timestamps per IP and report when the minute window is exceeded."""
     if not settings.rate_limit_enabled:
         return False
 
@@ -102,6 +109,8 @@ def reset_rate_limit_store() -> None:
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):
+    """Apply rate limits, security headers, and privacy-safe access logging."""
+
     def __init__(self, app: object, settings: Settings) -> None:
         super().__init__(app)  # type: ignore[arg-type]
         self.settings = settings
@@ -109,6 +118,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
+        """Enforce limits, attach headers, and log requests without full email addresses."""
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4())[:8])
         request.state.request_id = request_id
         request.state.domain_allowed = None

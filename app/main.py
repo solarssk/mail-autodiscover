@@ -25,37 +25,44 @@ _settings_provider: SettingsProvider = EnvSettingsProvider()
 
 
 def get_settings_provider() -> SettingsProvider:
+    """FastAPI dependency that returns the active settings provider."""
     return _settings_provider
 
 
 def get_settings(
     provider: Annotated[SettingsProvider, Depends(get_settings_provider)],
 ) -> Settings:
+    """FastAPI dependency that loads application settings."""
     return provider.get_settings()
 
 
 def _domain_error_response(settings: Settings) -> JSONResponse:
+    """Return the configured response for disallowed mailbox domains."""
     if settings.return_404_for_unknown_domain:
         return JSONResponse(status_code=404, content={"detail": "Not found"})
     return JSONResponse(status_code=400, content={"detail": "Configuration not available"})
 
 
 def _invalid_request() -> JSONResponse:
+    """Return a generic 400 for malformed autodiscovery requests."""
     return JSONResponse(status_code=400, content={"detail": "Invalid request"})
 
 
 def _xml_response(content: str) -> Response:
+    """Wrap autodiscovery XML with the standard response content type."""
     return Response(content=content, media_type=XML_CONTENT_TYPE)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Configure process logging when the application starts."""
     settings = _settings_provider.get_settings()
     logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
     yield
 
 
 def create_app(settings_provider: SettingsProvider | None = None) -> FastAPI:
+    """Build the FastAPI app with autodiscovery routes and security middleware."""
     global _settings_provider
     if settings_provider is not None:
         _settings_provider = settings_provider
@@ -96,6 +103,7 @@ def create_app(settings_provider: SettingsProvider | None = None) -> FastAPI:
         emailaddress: str | None,
         settings: Settings,
     ) -> Response:
+        """Shared handler for Thunderbird autoconfig endpoints."""
         if not settings.thunderbird_enabled:
             return JSONResponse(status_code=404, content={"detail": "Not found"})
 
@@ -116,6 +124,7 @@ def create_app(settings_provider: SettingsProvider | None = None) -> FastAPI:
         emailaddress: str | None,
         settings: Settings,
     ) -> Response:
+        """Shared handler for Apple Mail mobileconfig endpoints."""
         if not settings.apple_mobileconfig_enabled:
             return JSONResponse(status_code=404, content={"detail": "Not found"})
 

@@ -16,6 +16,8 @@ _EMAIL_PATTERN = re.compile(
 
 
 class EmailValidationError(Enum):
+    """Reasons an email address failed validation."""
+
     EMPTY = "empty"
     INVALID_FORMAT = "invalid_format"
     DOMAIN_NOT_ALLOWED = "domain_not_allowed"
@@ -23,18 +25,22 @@ class EmailValidationError(Enum):
 
 @dataclass(frozen=True)
 class ValidatedEmail:
+    """Normalized email address split into domain and local part."""
+
     email: str
     domain: str
     local_part: str
 
 
 def normalize_email(raw: str | None) -> str:
+    """Strip whitespace from a raw email input, treating None as empty."""
     if raw is None:
         return ""
     return raw.strip()
 
 
 def extract_domain(email: str) -> str | None:
+    """Return the lowercased domain part of an email, or None if missing."""
     if "@" not in email:
         return None
     return email.rsplit("@", 1)[1].lower()
@@ -63,6 +69,7 @@ def validate_email(
 
 
 def build_username(validated: ValidatedEmail, username_format: UsernameFormat) -> str:
+    """Format the IMAP/SMTP username from a validated email address."""
     if username_format == UsernameFormat.LOCALPART:
         return validated.local_part
     return validated.email

@@ -2,6 +2,7 @@
 
 
 def landing_page_html(app_name: str) -> str:
+    """Render the public root page without exposing mail configuration."""
     title = _escape(app_name)
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -33,13 +34,14 @@ def landing_page_html(app_name: str) -> str:
     <p>This host provides <strong>mail client autodiscovery</strong> only
        (Outlook, Thunderbird, Apple Mail profiles).</p>
     <p>It is not a webmail interface or administration panel.</p>
-    <p><a href="https://github.com/solarssk/autodiscover">Project on GitHub</a></p>
+    <p><a href="https://github.com/solarssk/mail-autodiscover">Project on GitHub</a></p>
   </main>
 </body>
 </html>"""
 
 
 def robots_txt() -> str:
+    """Discourage indexing of the autodiscovery host."""
     return "User-agent: *\nDisallow: /\n"
 
 

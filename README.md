@@ -4,7 +4,7 @@
 
 It is built for admins who run their own mail stack and want Outlook, Thunderbird, and Apple Mail to pick up the correct IMAP/SMTP settings automatically.
 
-If you want to get started quickly, copy [`.env.example`](.env.example), review the values, and deploy with [`docker-compose.ghcr.yml`](docker-compose.ghcr.yml). The rest of the documentation is split into focused wiki pages instead of one long README.
+If you want to get started quickly, copy [`.env.example`](.env.example), review the values, and deploy with [`docker-compose.ghcr.yml`](docker-compose.ghcr.yml). The rest of the documentation lives in the project's GitHub Wiki instead of one long README.
 
 ## Is this for me?
 
@@ -66,11 +66,11 @@ TRUSTED_PROXY_IPS=127.0.0.1,10.0.0.0/8
 Prebuilt images are published to GHCR:
 
 ```text
-ghcr.io/solarssk/autodiscover:latest
-ghcr.io/solarssk/autodiscover:0.2.0
+ghcr.io/solarssk/mail-autodiscover:latest
+ghcr.io/solarssk/mail-autodiscover:<release-tag>
 ```
 
-Use a pinned version in production rather than `latest`.
+`latest` is published on every `main` build. Semver tags such as `0.2.1` appear when a matching `v*` Git tag is pushed. `docker-compose.ghcr.yml` defaults to `latest`; set `IMAGE_TAG` in `.env` or Portainer to a release tag in production.
 
 ```bash
 cp .env.example .env
@@ -81,18 +81,18 @@ The GHCR compose file reads the values you set in `.env` or in your Portainer en
 
 ## Wiki
 
-The wiki content is prepared in [`wiki/`](wiki/) as GitHub Wiki-ready pages:
+The full documentation lives in the [GitHub Wiki](https://github.com/solarssk/mail-autodiscover/wiki):
 
-- [`Home`](wiki/Home.md)
-- [`What This Project Does`](wiki/What-This-Project-Does.md)
-- [`Quick Start`](wiki/Quick-Start.md)
-- [`Deployment with Docker or Portainer`](wiki/Deployment-with-Docker-or-Portainer.md)
-- [`Reverse Proxy and DNS`](wiki/Reverse-Proxy-and-DNS.md)
-- [`Client Setup`](wiki/Client-Setup-Outlook-Thunderbird-Apple-Mail.md)
-- [`Configuration Reference`](wiki/Configuration-Reference.md)
-- [`Upgrade Guide`](wiki/Upgrade-Guide.md)
-- [`Security Model`](wiki/Security-Model.md)
-- [`Troubleshooting`](wiki/Troubleshooting.md)
+- [`Home`](https://github.com/solarssk/mail-autodiscover/wiki)
+- [`What This Project Does`](https://github.com/solarssk/mail-autodiscover/wiki/What-This-Project-Does)
+- [`Quick Start`](https://github.com/solarssk/mail-autodiscover/wiki/Quick-Start)
+- [`Deployment with Docker or Portainer`](https://github.com/solarssk/mail-autodiscover/wiki/Deployment-with-Docker-or-Portainer)
+- [`Reverse Proxy and DNS`](https://github.com/solarssk/mail-autodiscover/wiki/Reverse-Proxy-and-DNS)
+- [`Client Setup`](https://github.com/solarssk/mail-autodiscover/wiki/Client-Setup-Outlook-Thunderbird-Apple-Mail)
+- [`Configuration Reference`](https://github.com/solarssk/mail-autodiscover/wiki/Configuration-Reference)
+- [`Upgrade Guide`](https://github.com/solarssk/mail-autodiscover/wiki/Upgrade-Guide)
+- [`Security Model`](https://github.com/solarssk/mail-autodiscover/wiki/Security-Model)
+- [`Troubleshooting`](https://github.com/solarssk/mail-autodiscover/wiki/Troubleshooting)
 
 ## End-user setup
 
@@ -143,7 +143,7 @@ Then install the downloaded profile and enter the mailbox password when prompted
 - Security headers enabled by default
 - No admin panel in the current version
 
-For the detailed security model, see [`SECURITY.md`](SECURITY.md) and the wiki page [`Security Model`](wiki/Security-Model.md).
+For the detailed security model, see [`SECURITY.md`](SECURITY.md) and the wiki page [`Security Model`](https://github.com/solarssk/mail-autodiscover/wiki/Security-Model).
 
 ## Local development
 

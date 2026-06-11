@@ -9,14 +9,17 @@ from app.email_utils import ValidatedEmail, build_username
 
 
 def _esc(value: str | int) -> str:
+    """XML-escape a value for safe inclusion in response bodies."""
     return escape(str(value))
 
 
 def _outlook_ssl_on(socket_type: SocketType) -> str:
+    """Map socket type to Outlook Autodiscover SSL on/off values."""
     return "on" if socket_type in (SocketType.SSL, SocketType.STARTTLS) else "off"
 
 
 def thunderbird_autoconfig(validated: ValidatedEmail, settings: Settings) -> str:
+    """Build Thunderbird clientConfig XML for a validated mailbox."""
     username = build_username(validated, settings.username_format)
     domain = validated.domain
 
@@ -59,6 +62,7 @@ def thunderbird_autoconfig(validated: ValidatedEmail, settings: Settings) -> str
 
 
 def outlook_autodiscover(validated: ValidatedEmail, settings: Settings) -> str:
+    """Build Outlook Autodiscover XML with IMAP and SMTP settings."""
     username = build_username(validated, settings.username_format)
     imap_ssl = _outlook_ssl_on(settings.imap_socket_type)
     smtp_ssl = _outlook_ssl_on(settings.smtp_socket_type)
@@ -100,6 +104,7 @@ def outlook_autodiscover(validated: ValidatedEmail, settings: Settings) -> str:
 
 
 def outlook_get_neutral_response() -> str:
+    """Return a neutral Outlook error response for unauthenticated GET probes."""
     return """<?xml version="1.0" encoding="utf-8"?>
 <Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/responseschema/2006">
   <Response>
