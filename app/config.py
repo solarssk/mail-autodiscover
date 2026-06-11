@@ -186,6 +186,10 @@ class Settings(BaseSettings):
             errors.append(
                 "RATE_LIMIT_PER_MINUTE must be greater than 0 when rate limiting is enabled"
             )
+        if self.rate_limit_enabled and self.rate_limit_max_clients <= 0:
+            errors.append(
+                "RATE_LIMIT_MAX_CLIENTS must be greater than 0 when rate limiting is enabled"
+            )
 
         if self.max_request_body_bytes <= 0:
             errors.append("MAX_REQUEST_BODY_BYTES must be greater than 0")
