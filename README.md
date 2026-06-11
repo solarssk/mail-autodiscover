@@ -88,7 +88,7 @@ The full documentation lives in the [GitHub Wiki](https://github.com/solarssk/ma
 - [`Quick Start`](https://github.com/solarssk/mail-autodiscover/wiki/Quick-Start)
 - [`Deployment with Docker or Portainer`](https://github.com/solarssk/mail-autodiscover/wiki/Deployment-with-Docker-or-Portainer)
 - [`Reverse Proxy and DNS`](https://github.com/solarssk/mail-autodiscover/wiki/Reverse-Proxy-and-DNS)
-- [`Client Setup`](https://github.com/solarssk/mail-autodiscover/wiki/Client-Setup:-Outlook,-Thunderbird,-Apple-Mail)
+- [`Client Setup`](https://github.com/solarssk/mail-autodiscover/wiki/Client-Setup-Outlook-Thunderbird-Apple-Mail)
 - [`Configuration Reference`](https://github.com/solarssk/mail-autodiscover/wiki/Configuration-Reference)
 - [`Upgrade Guide`](https://github.com/solarssk/mail-autodiscover/wiki/Upgrade-Guide)
 - [`Security Model`](https://github.com/solarssk/mail-autodiscover/wiki/Security-Model)
