@@ -14,7 +14,7 @@ Avoid `latest` for long-lived environments.
 
 ## Docker Compose with GHCR image
 
-Use [`docker-compose.ghcr.yml`](/Users/filipchochol/Documents/Projects/autodiscover/docker-compose.ghcr.yml) as your starting point.
+Use [`docker-compose.ghcr.yml`](../docker-compose.ghcr.yml) as your starting point.
 
 Important values to review before deployment:
 

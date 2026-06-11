@@ -46,4 +46,4 @@ Disable endpoints you do not want to expose.
 
 ## Related file
 
-See the full example in [`.env.example`](/Users/filipchochol/Documents/Projects/autodiscover/.env.example).
+See the full example in [`.env.example`](../.env.example).

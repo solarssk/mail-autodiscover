@@ -4,7 +4,7 @@
 
 It is built for admins who run their own mail stack and want Outlook, Thunderbird, and Apple Mail to pick up the correct IMAP/SMTP settings automatically.
 
-If you want to get started quickly, copy [`.env.example`](/Users/filipchochol/Documents/Projects/autodiscover/.env.example), review the values, and deploy with [`docker-compose.ghcr.yml`](/Users/filipchochol/Documents/Projects/autodiscover/docker-compose.ghcr.yml). The rest of the documentation is split into focused wiki pages instead of one long README.
+If you want to get started quickly, copy [`.env.example`](.env.example), review the values, and deploy with [`docker-compose.ghcr.yml`](docker-compose.ghcr.yml). The rest of the documentation is split into focused wiki pages instead of one long README.
 
 ## Is this for me?
 
@@ -34,7 +34,7 @@ When a client asks for settings, the service returns IMAP/SMTP details from your
 
 ## Quick start for admins
 
-1. Copy [`.env.example`](/Users/filipchochol/Documents/Projects/autodiscover/.env.example) to `.env`.
+1. Copy [`.env.example`](.env.example) to `.env`.
 2. Set your public URL, allowed domains, and IMAP/SMTP hostnames.
 3. Deploy with Docker Compose or Portainer.
 4. Put the service behind HTTPS and configure your reverse proxy.
@@ -79,18 +79,18 @@ docker compose -f docker-compose.ghcr.yml up -d
 
 ## Wiki
 
-The wiki content is prepared in [`wiki/`](/Users/filipchochol/Documents/Projects/autodiscover/wiki) as GitHub Wiki-ready pages:
+The wiki content is prepared in [`wiki/`](wiki/) as GitHub Wiki-ready pages:
 
-- [`Home`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Home.md)
-- [`What This Project Does`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/What-This-Project-Does.md)
-- [`Quick Start`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Quick-Start.md)
-- [`Deployment with Docker or Portainer`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Deployment-with-Docker-or-Portainer.md)
-- [`Reverse Proxy and DNS`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Reverse-Proxy-and-DNS.md)
-- [`Client Setup`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Client-Setup-Outlook-Thunderbird-Apple-Mail.md)
-- [`Configuration Reference`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Configuration-Reference.md)
-- [`Upgrade Guide`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Upgrade-Guide.md)
-- [`Security Model`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Security-Model.md)
-- [`Troubleshooting`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Troubleshooting.md)
+- [`Home`](wiki/Home.md)
+- [`What This Project Does`](wiki/What-This-Project-Does.md)
+- [`Quick Start`](wiki/Quick-Start.md)
+- [`Deployment with Docker or Portainer`](wiki/Deployment-with-Docker-or-Portainer.md)
+- [`Reverse Proxy and DNS`](wiki/Reverse-Proxy-and-DNS.md)
+- [`Client Setup`](wiki/Client-Setup-Outlook-Thunderbird-Apple-Mail.md)
+- [`Configuration Reference`](wiki/Configuration-Reference.md)
+- [`Upgrade Guide`](wiki/Upgrade-Guide.md)
+- [`Security Model`](wiki/Security-Model.md)
+- [`Troubleshooting`](wiki/Troubleshooting.md)
 
 ## End-user setup
 
@@ -141,7 +141,7 @@ Then install the downloaded profile and enter the mailbox password when prompted
 - Security headers enabled by default
 - No admin panel in the current version
 
-For the detailed security model, see [`SECURITY.md`](/Users/filipchochol/Documents/Projects/autodiscover/SECURITY.md) and the wiki page [`Security Model`](/Users/filipchochol/Documents/Projects/autodiscover/wiki/Security-Model.md).
+For the detailed security model, see [`SECURITY.md`](SECURITY.md) and the wiki page [`Security Model`](wiki/Security-Model.md).
 
 ## Local development
 
@@ -162,4 +162,4 @@ mypy app
 bandit -r app -ll -c pyproject.toml
 ```
 
-Developer workflow and release process live in [`CONTRIBUTING.md`](/Users/filipchochol/Documents/Projects/autodiscover/CONTRIBUTING.md).
+Developer workflow and release process live in [`CONTRIBUTING.md`](CONTRIBUTING.md).

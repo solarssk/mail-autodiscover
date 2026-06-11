@@ -29,4 +29,4 @@ You still need to deploy it correctly:
 - with minimal allowed domains,
 - with production image tags pinned.
 
-For the maintainer-level policy, see [`SECURITY.md`](/Users/filipchochol/Documents/Projects/autodiscover/SECURITY.md).
+For the maintainer-level policy, see [`SECURITY.md`](../SECURITY.md).
