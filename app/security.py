@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import ipaddress
+import json
 import logging
 import time
 import uuid
@@ -22,6 +23,21 @@ logger = logging.getLogger("mail_autodiscover.access")
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
 _rate_limit_lock = Lock()
 _last_rate_limit_cleanup = 0.0
+
+
+def _log_event(
+    level: int,
+    *,
+    json_mode: bool,
+    logger_name: logging.Logger,
+    **fields: object,
+) -> None:
+    """Log access events as structured JSON or compact key=value pairs."""
+    if json_mode:
+        logger_name.log(level, json.dumps(fields, sort_keys=True, separators=(",", ":")))
+        return
+    message = " ".join(f"{key}={value}" for key, value in fields.items())
+    logger_name.log(level, message)
 
 
 def _peer_ip(request: Request) -> str | None:
@@ -119,7 +135,7 @@ def hash_domain(domain: str) -> str:
 
 def should_skip_rate_limit(path: str) -> bool:
     """Return whether the path is exempt from per-IP rate limiting."""
-    return path == "/health"
+    return path in {"/health", "/ready"}
 
 
 def should_skip_access_log(path: str, settings: Settings) -> bool:
@@ -173,10 +189,15 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         client_ip = get_client_ip(request, self.settings)
         if not should_skip_rate_limit(path) and is_rate_limited(client_ip, self.settings):
-            logger.warning(
-                "request_id=%s endpoint=%s status=429 rate_limited=true",
-                request_id,
-                request.url.path,
+            _log_event(
+                logging.WARNING,
+                json_mode=self.settings.structured_json_logs,
+                logger_name=logger,
+                event="request",
+                request_id=request_id,
+                endpoint=request.url.path,
+                status=429,
+                rate_limited=True,
             )
             return JSONResponse(
                 status_code=429,
@@ -204,17 +225,44 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 domain_info = f"domain_allowed={'true' if domain_allowed else 'false'}"
             domain_hash = getattr(request.state, "domain_hash", None)
             if domain_hash:
-                domain_info += f" domain_hash={domain_hash}"
-
-            logger.info(
-                "request_id=%s client_ip=%s method=%s endpoint=%s status=%s %s",
-                request_id,
-                client_ip,
-                request.method,
-                path,
-                response.status_code,
-                domain_info,
-            )
+                if self.settings.structured_json_logs:
+                    _log_event(
+                        logging.INFO,
+                        json_mode=True,
+                        logger_name=logger,
+                        event="request",
+                        request_id=request_id,
+                        client_ip=client_ip,
+                        method=request.method,
+                        endpoint=path,
+                        status=response.status_code,
+                        domain_allowed=domain_allowed,
+                        domain_hash=domain_hash,
+                    )
+                else:
+                    domain_info += f" domain_hash={domain_hash}"
+                    logger.info(
+                        "request_id=%s client_ip=%s method=%s endpoint=%s status=%s %s",
+                        request_id,
+                        client_ip,
+                        request.method,
+                        path,
+                        response.status_code,
+                        domain_info,
+                    )
+            else:
+                _log_event(
+                    logging.INFO,
+                    json_mode=self.settings.structured_json_logs,
+                    logger_name=logger,
+                    event="request",
+                    request_id=request_id,
+                    client_ip=client_ip,
+                    method=request.method,
+                    endpoint=path,
+                    status=response.status_code,
+                    domain_allowed=domain_allowed,
+                )
 
         return response
 

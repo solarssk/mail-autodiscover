@@ -13,6 +13,12 @@ def test_health_endpoint(client: TestClient) -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_ready_endpoint(client: TestClient) -> None:
+    response = client.get("/ready")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
+
+
 def test_outlook_disabled() -> None:
     reset_rate_limit_store()
     settings = make_settings(outlook_enabled=False)
@@ -49,6 +55,15 @@ def test_security_headers_disabled() -> None:
         response = c.get("/health")
     assert response.headers.get("X-Content-Type-Options") is None
     assert response.headers.get("Cache-Control") is None
+
+
+def test_ready_not_rate_limited() -> None:
+    reset_rate_limit_store()
+    settings = make_settings(rate_limit_enabled=True, rate_limit_per_minute=1)
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as c:
+        for _ in range(4):
+            assert c.get("/ready").status_code == 200
 
 
 def test_thunderbird_pop3_block_when_enabled() -> None:

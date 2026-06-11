@@ -1,53 +1,52 @@
 # mail-autodiscover
 
-`mail-autodiscover` is a small HTTP service that helps mail clients configure themselves for your self-hosted mail server.
+`mail-autodiscover` is a small deploy-and-forget HTTP service for self-hosted mail admins.
 
-It is built for admins who run their own mail stack and want Outlook, Thunderbird, and Apple Mail to pick up the correct IMAP/SMTP settings automatically.
-
-If you want to get started quickly, copy [`.env.example`](.env.example), review the values, and deploy with [`docker-compose.ghcr.yml`](docker-compose.ghcr.yml). The rest of the documentation lives in the project's GitHub Wiki instead of one long README.
-
-## Is this for me?
-
-Use this project if:
-
-- you run your own mail server,
-- you want automatic client configuration for your users,
-- you are happy to provide the same configuration for every valid email address in your allowed domains,
-- you want a small service with environment-based configuration.
-
-This project is not for you if:
-
-- you need a mail server, webmail, or an admin panel,
-- you need mailbox existence checks,
-- you need Exchange, EWS, ActiveSync, calendars, or contacts,
-- you want per-user or per-mailbox dynamic logic.
-
-## What it does
-
-The service exposes standard autodiscovery endpoints used by mail clients:
+It exposes standard autodiscovery endpoints for:
 
 - Outlook Autodiscover
 - Thunderbird Autoconfig
-- Apple Mail `.mobileconfig` profiles
+- Apple Mail `.mobileconfig`
+- POP3 in Thunderbird config when enabled for a domain
 
-When a client asks for settings, the service returns IMAP/SMTP details from your environment variables. It does not log full email addresses and it does not check whether a mailbox exists.
+The product goal is deliberately narrow:
 
-## Quick start for admins
+- stateless container
+- no admin panel
+- no database
+- no mailbox existence checks
+- no LDAP / Synology / directory lookups
+
+If you want a small service you can deploy behind HTTPS and mostly forget about, this is what it is for.
+
+## What It Does
+
+For any syntactically valid mailbox in an allowed domain, the service returns the configured IMAP/SMTP settings and, optionally, POP3 for Thunderbird.
+
+It does **not**:
+
+- verify whether a mailbox exists
+- expose your internal domain list on the landing page
+- return different answers for existing vs non-existing mailboxes
+- manage users or credentials
+
+## Quick Start
 
 1. Copy [`.env.example`](.env.example) to `.env`.
-2. Set your public URL, allowed domains, and IMAP/SMTP hostnames.
+2. Choose one configuration mode:
+   - single/global config in ENV
+   - multi-domain config in [`config/config.example.yaml`](config/config.example.yaml)
 3. Deploy with Docker Compose or Portainer.
-4. Put the service behind HTTPS and configure your reverse proxy.
-5. Point `autodiscover.` and `autoconfig.` DNS records to your proxy.
+4. Put the service behind HTTPS reverse proxy.
+5. Point `autodiscover.` and `autoconfig.` DNS records to that proxy.
 6. Test the endpoints before sharing them with users.
 
-### Example `.env`
+### Single-Domain Or Shared Global Config
 
 ```env
-APP_NAME=mail-autodiscover
 APP_ENV=production
 PUBLIC_BASE_URL=https://autodiscover.example.com
-ALLOWED_DOMAINS=example.com
+ALLOWED_DOMAINS=example.com,example.org
 MAIL_DISPLAY_NAME=Example Mail
 MAIL_DISPLAY_SHORT_NAME=Example
 IMAP_HOST=mail.example.com
@@ -56,81 +55,76 @@ IMAP_SOCKET_TYPE=SSL
 SMTP_HOST=mail.example.com
 SMTP_PORT=587
 SMTP_SOCKET_TYPE=STARTTLS
-USERNAME_FORMAT=email
+POP3_ENABLED=false
 TRUST_PROXY_HEADERS=true
 TRUSTED_PROXY_IPS=127.0.0.1,10.0.0.0/8
 ```
 
-Behind a reverse proxy, set `TRUST_PROXY_HEADERS=true` and list your proxy or Docker bridge CIDRs in `TRUSTED_PROXY_IPS`. In production both are required together; the service refuses to start with proxy trust enabled but no trusted networks.
+This mode serves the same IMAP/SMTP profile for every domain listed in `ALLOWED_DOMAINS`.
 
-### Docker / Portainer
+### Multi-Domain Config File
+
+Set:
+
+```env
+CONFIG_FILE=/config/config.yaml
+```
+
+Then mount a file like [`config/config.example.yaml`](config/config.example.yaml).
+
+If `CONFIG_FILE` exists, domain settings are loaded from YAML and the application ignores the global `ALLOWED_DOMAINS`/`IMAP_*`/`SMTP_*` values for request routing.
+
+`USERNAME_FORMAT` is not per-domain in YAML mode; it still comes from ENV and applies to every configured domain.
+
+## Docker / Portainer
+
+For local builds:
+
+```bash
+docker compose up -d
+```
+
+For GHCR images:
+
+```bash
+docker compose -f docker-compose.ghcr.yml up -d
+```
+
+The compose examples mount `./config:/config:ro`, so placing `config/config.yaml` next to the compose file is enough for multi-domain mode.
 
 Prebuilt images are published to GHCR:
 
 ```text
 ghcr.io/solarssk/mail-autodiscover:latest
-ghcr.io/solarssk/mail-autodiscover:0.2.2
+ghcr.io/solarssk/mail-autodiscover:0.3.0
 ```
 
-`latest` is published on every `main` build. Prefer a pinned semver tag such as `0.2.2` in production. `docker-compose.ghcr.yml` defaults to `0.2.2`; override `IMAGE_TAG` in `.env` or Portainer when needed.
+Prefer pinned tags or digests in production.
 
-```bash
-cp .env.example .env
-docker compose -f docker-compose.ghcr.yml up -d
-```
+## Reverse Proxy Contract
 
-The GHCR compose file reads the values you set in `.env` or in your Portainer environment settings.
+- `TRUST_PROXY_HEADERS=false` is the safe default.
+- Enable `TRUST_PROXY_HEADERS=true` only when traffic really arrives through your own proxy.
+- In production, `TRUSTED_PROXY_IPS` is required whenever proxy header trust is enabled.
+- Thunderbird and Apple Mail use `?emailaddress=user@example.com` in the query string.
 
-## Wiki
+Important:
 
-The full documentation lives in the [GitHub Wiki](https://github.com/solarssk/mail-autodiscover/wiki):
+Your reverse proxy may log the full query string even though this application does not. Review access log settings for:
 
-- [`Home`](https://github.com/solarssk/mail-autodiscover/wiki)
-- [`What This Project Does`](https://github.com/solarssk/mail-autodiscover/wiki/What-This-Project-Does)
-- [`Quick Start`](https://github.com/solarssk/mail-autodiscover/wiki/Quick-Start)
-- [`Deployment with Docker or Portainer`](https://github.com/solarssk/mail-autodiscover/wiki/Deployment-with-Docker-or-Portainer)
-- [`Reverse Proxy and DNS`](https://github.com/solarssk/mail-autodiscover/wiki/Reverse-Proxy-and-DNS)
-- [`Client Setup`](https://github.com/solarssk/mail-autodiscover/wiki/Client-Setup-Outlook-Thunderbird-Apple-Mail)
-- [`Configuration Reference`](https://github.com/solarssk/mail-autodiscover/wiki/Configuration-Reference)
-- [`Upgrade Guide`](https://github.com/solarssk/mail-autodiscover/wiki/Upgrade-Guide)
-- [`Security Model`](https://github.com/solarssk/mail-autodiscover/wiki/Security-Model)
-- [`Troubleshooting`](https://github.com/solarssk/mail-autodiscover/wiki/Troubleshooting)
-
-## End-user setup
-
-Your users do not need to know how Autodiscover works. They only need the correct address or profile URL.
-
-### Outlook
-
-1. Open Outlook and add the mailbox address.
-2. Enter the password when asked.
-3. If Autodiscover is reachable and the domain is allowed, Outlook should fill in the server settings automatically.
-
-### Thunderbird
-
-1. Open account setup in Thunderbird.
-2. Enter the name, email address, and password.
-3. Thunderbird should fetch settings from `/mail/config-v1.1.xml` or the `.well-known` alias.
-
-### Apple Mail
-
-Open this URL in Safari and replace the domain and address:
-
-```text
-https://autodiscover.example.com/mail/ios.mobileconfig?emailaddress=user@example.com
-```
-
-Then install the downloaded profile and enter the mailbox password when prompted.
-
-The profile is **unsigned**. iOS and macOS show a warning before installation — that is expected for self-hosted configuration profiles. Re-downloading the same URL updates the existing profile because identifiers are stable per domain.
+- `/mail/config-v1.1.xml`
+- `/.well-known/autoconfig/mail/config-v1.1.xml`
+- `/mail/ios.mobileconfig`
+- `/.well-known/apple-mail.mobileconfig`
 
 ## Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/health` | Health check for monitoring |
-| `GET` | `/` | Simple landing page with no sensitive configuration |
-| `GET` | `/robots.txt` | Tells crawlers not to index the host |
+| `GET` | `/health` | Liveness probe |
+| `GET` | `/ready` | Readiness probe |
+| `GET` | `/` | Minimal landing page |
+| `GET` | `/robots.txt` | No-index hint |
 | `GET` | `/mail/config-v1.1.xml?emailaddress=...` | Thunderbird Autoconfig |
 | `GET` | `/.well-known/autoconfig/mail/config-v1.1.xml?emailaddress=...` | Thunderbird alias |
 | `GET` | `/mail/ios.mobileconfig?emailaddress=...` | Apple Mail profile |
@@ -138,32 +132,58 @@ The profile is **unsigned**. iOS and macOS show a warning before installation �
 | `POST` | `/autodiscover/autodiscover.xml` | Outlook Autodiscover |
 | `GET` | `/autodiscover/autodiscover.xml` | Neutral Outlook response |
 
-Thunderbird and Apple Mail endpoints pass `emailaddress` in the query string (standard client behavior). Configure your reverse proxy so it does not log full query strings on autoconfig paths — otherwise the email address may appear in nginx, Caddy, NPM, or Cloudflare access logs even though this service does not log it.
+## Apple Mail Notes
 
-## Security at a glance
+- Profiles are unsigned by default.
+- iOS and macOS warn about unsigned profiles in self-hosted setups; this is expected.
+- Profiles never contain mailbox passwords.
+- Re-downloading the same mailbox profile updates the existing profile because identifiers are stable.
+- If you need signed profiles, sign them externally before distribution.
 
-- No mailbox enumeration
-- No full email address logging
-- In-memory rate limiting per IP
-- Safe XML parsing
-- Security headers enabled by default
-- No admin panel in the current version
+## Logging And Observability
 
-For the detailed security model, see [`SECURITY.md`](SECURITY.md) and the wiki page [`Security Model`](https://github.com/solarssk/mail-autodiscover/wiki/Security-Model).
+- `X-Request-ID` is attached to responses and access logs.
+- Access logs never include the full mailbox address.
+- `STRUCTURED_JSON_LOGS=true` switches access logging to JSON.
+- `/metrics` is intentionally not built in.
 
-## Local development
+## Documentation
+
+- [Reverse Proxy and DNS](docs/dns.md)
+- [Nginx](docs/reverse-proxy/nginx.md)
+- [Caddy](docs/reverse-proxy/caddy.md)
+- [Nginx Proxy Manager](docs/reverse-proxy/nginx-proxy-manager.md)
+- [Synology Reverse Proxy](docs/reverse-proxy/synology-reverse-proxy.md)
+- [Cloudflare Tunnel / Generic Proxy](docs/reverse-proxy/cloudflare-tunnel.md)
+- [Outlook client setup](docs/clients/outlook.md)
+- [Thunderbird client setup](docs/clients/thunderbird.md)
+- [Apple Mail client setup](docs/clients/apple-mail.md)
+- [Troubleshooting](docs/troubleshooting.md)
+
+## Security At A Glance
+
+- no mailbox enumeration
+- no full email address logging
+- safe XML parsing
+- bounded in-memory rate limiting
+- security headers enabled by default
+- no admin API
+
+See [SECURITY.md](SECURITY.md) for the detailed trust model.
+
+## Local Development
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install ".[dev]"
 cp .env.example .env
-# Use development locally with placeholder values; production requires real domains and HTTPS.
-export APP_ENV=development
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --reload
 ```
 
-## Quality checks
+For development with placeholder values, set `APP_ENV=test` or `APP_ENV=development`.
+
+## Quality Checks
 
 ```bash
 ruff check .
@@ -171,5 +191,3 @@ pytest -v
 mypy app
 bandit -r app -ll -c pyproject.toml
 ```
-
-Developer workflow and release process live in [`CONTRIBUTING.md`](CONTRIBUTING.md).

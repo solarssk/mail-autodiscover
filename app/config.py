@@ -1,13 +1,15 @@
-"""Application configuration via environment variables."""
+"""Application configuration via environment variables or YAML file."""
 
 from __future__ import annotations
 
 import ipaddress
 from enum import StrEnum
 from functools import lru_cache
+from pathlib import Path
 from typing import Protocol
 
-from pydantic import AliasChoices, Field, field_validator, model_validator
+import yaml  # type: ignore[import-untyped]
+from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _MAX_REQUEST_BODY_BYTES = 1_048_576
@@ -30,6 +32,71 @@ class SocketType(StrEnum):
     PLAIN = "plain"
 
 
+class MailServerSettings(BaseModel):
+    """Connection settings for one mail protocol."""
+
+    host: str
+    port: int
+    socket_type: SocketType
+    authentication: str
+
+    @field_validator("socket_type", mode="before")
+    @classmethod
+    def normalize_socket_type(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.upper() if value.lower() != "plain" else "plain"
+        return value
+
+
+class Pop3Settings(MailServerSettings):
+    """POP3 settings for a domain."""
+
+    enabled: bool = False
+
+
+class DomainMailSettings(BaseModel):
+    """Mail settings for a single email domain."""
+
+    display_name: str
+    display_short_name: str
+    imap: MailServerSettings
+    smtp: MailServerSettings
+    pop3: Pop3Settings | None = None
+
+    @classmethod
+    def from_env_settings(cls, settings: Settings) -> DomainMailSettings:
+        """Build a domain config from the global environment-based settings."""
+        return cls(
+            display_name=settings.mail_display_name,
+            display_short_name=settings.mail_display_short_name,
+            imap=MailServerSettings(
+                host=settings.imap_host,
+                port=settings.imap_port,
+                socket_type=settings.imap_socket_type,
+                authentication=settings.imap_authentication,
+            ),
+            smtp=MailServerSettings(
+                host=settings.smtp_host,
+                port=settings.smtp_port,
+                socket_type=settings.smtp_socket_type,
+                authentication=settings.smtp_authentication,
+            ),
+            pop3=Pop3Settings(
+                enabled=settings.pop3_enabled,
+                host=settings.pop3_host,
+                port=settings.pop3_port,
+                socket_type=settings.pop3_socket_type,
+                authentication=settings.pop3_authentication,
+            ),
+        )
+
+
+class DomainConfigFile(BaseModel):
+    """Top-level YAML configuration shape for multi-domain setup."""
+
+    domains: dict[str, DomainMailSettings]
+
+
 class Settings(BaseSettings):
     """Environment-driven mail autodiscovery configuration."""
 
@@ -43,6 +110,7 @@ class Settings(BaseSettings):
     app_name: str = Field(default="mail-autodiscover", alias="APP_NAME")
     app_env: str = Field(default="production", alias="APP_ENV")
     public_base_url: str = Field(default="http://localhost:8000", alias="PUBLIC_BASE_URL")
+    config_file: str = Field(default="/config/config.yaml", alias="CONFIG_FILE")
 
     allowed_domains: str = Field(default="example.com", alias="ALLOWED_DOMAINS")
 
@@ -69,6 +137,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("TRUSTED_PROXY_IPS", "FORWARDED_ALLOW_IPS"),
     )
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    structured_json_logs: bool = Field(default=False, alias="STRUCTURED_JSON_LOGS")
 
     max_request_body_bytes: int = Field(default=16384, alias="MAX_REQUEST_BODY_BYTES")
     rate_limit_enabled: bool = Field(default=True, alias="RATE_LIMIT_ENABLED")
@@ -92,12 +161,13 @@ class Settings(BaseSettings):
     )
     disable_access_log: bool = Field(default=False, alias="DISABLE_ACCESS_LOG")
     access_log_skip_paths: str = Field(
-        default="/health,/favicon.ico,/apple-touch-icon.png",
+        default="/health,/ready,/favicon.ico,/apple-touch-icon.png",
         alias="ACCESS_LOG_SKIP_PATHS",
     )
     security_headers_enabled: bool = Field(default=True, alias="SECURITY_HEADERS_ENABLED")
 
     apple_mobileconfig_enabled: bool = Field(default=True, alias="APPLE_MOBILECONFIG_ENABLED")
+    domain_configs: dict[str, DomainMailSettings] = Field(default_factory=dict, exclude=True)
 
     @field_validator("allowed_domains", mode="before")
     @classmethod
@@ -108,6 +178,8 @@ class Settings(BaseSettings):
 
     @property
     def allowed_domains_set(self) -> frozenset[str]:
+        if self.domain_configs:
+            return frozenset(self.domain_configs)
         domains = {d.strip().lower() for d in self.allowed_domains.split(",") if d.strip()}
         return frozenset(domains)
 
@@ -145,42 +217,75 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> Settings:
-        """Reject unsafe placeholder configuration when APP_ENV is production."""
-        if self.app_env.lower() != "production":
-            return self
+        """Load config file when present and reject unsafe production settings."""
+        self.domain_configs = self._load_domain_configs()
+        errors: list[str] = self._shared_validation_errors()
 
+        if self.domain_configs:
+            self._validate_domain_config(errors)
+        elif self.app_env.lower() == "production":
+            self._validate_env_config(errors)
+
+        if errors:
+            raise ValueError("; ".join(errors))
+        return self
+
+    def _load_domain_configs(self) -> dict[str, DomainMailSettings]:
+        """Read and validate per-domain YAML config if the configured file exists."""
+        config_path = self.config_file.strip()
+        if not config_path:
+            return {}
+
+        path = Path(config_path)
+        if not path.exists():
+            return {}
+
+        try:
+            raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except OSError as exc:
+            raise ValueError(f"Unable to read CONFIG_FILE {path}: {exc}") from exc
+        except yaml.YAMLError as exc:
+            raise ValueError(f"CONFIG_FILE {path} is not valid YAML: {exc}") from exc
+
+        if raw in (None, ""):
+            raise ValueError(f"CONFIG_FILE {path} is empty")
+
+        try:
+            parsed = DomainConfigFile.model_validate(raw)
+        except Exception as exc:
+            raise ValueError(f"CONFIG_FILE {path} has invalid domain config: {exc}") from exc
+
+        normalized: dict[str, DomainMailSettings] = {}
+        for domain, domain_settings in parsed.domains.items():
+            token = domain.strip().lower()
+            if not token:
+                raise ValueError("CONFIG_FILE contains an empty domain key")
+            normalized[token] = domain_settings
+        if not normalized:
+            raise ValueError(f"CONFIG_FILE {path} must define at least one domain")
+        return normalized
+
+    def _shared_validation_errors(self) -> list[str]:
+        """Return validation errors shared by env and YAML modes."""
         errors: list[str] = []
 
-        if self.trust_proxy_headers:
-            if not self.trusted_proxy_ips.strip():
-                errors.append(
-                    "TRUST_PROXY_HEADERS=true requires non-empty TRUSTED_PROXY_IPS in production"
-                )
-            elif not self.trusted_proxy_networks:
-                errors.append(
-                    "TRUSTED_PROXY_IPS contains no valid CIDR or IP entries in production"
-                )
+        if self.app_env.lower() == "production":
+            if self.trust_proxy_headers:
+                if not self.trusted_proxy_ips.strip():
+                    errors.append(
+                        "TRUST_PROXY_HEADERS=true requires non-empty "
+                        "TRUSTED_PROXY_IPS in production"
+                    )
+                elif not self.trusted_proxy_networks:
+                    errors.append(
+                        "TRUSTED_PROXY_IPS contains no valid CIDR or IP entries in production"
+                    )
 
-        domains = self.allowed_domains_set
-        if not domains or domains == frozenset({"example.com"}):
-            errors.append(
-                "ALLOWED_DOMAINS must be set to your real domain(s) in production "
-                "(not example.com)"
-            )
-
-        if (
-            self.imap_host == _PLACEHOLDER_IMAP_HOST
-            and self.smtp_host == _PLACEHOLDER_SMTP_HOST
-        ):
-            errors.append(
-                "IMAP_HOST and SMTP_HOST still use placeholder mail.example.com in production"
-            )
-
-        base_url = self.public_base_url.lower()
-        if "localhost" in base_url:
-            errors.append("PUBLIC_BASE_URL must not use localhost in production")
-        if not base_url.startswith("https://"):
-            errors.append("PUBLIC_BASE_URL must use https:// in production")
+            base_url = self.public_base_url.lower()
+            if "localhost" in base_url:
+                errors.append("PUBLIC_BASE_URL must not use localhost in production")
+            if not base_url.startswith("https://"):
+                errors.append("PUBLIC_BASE_URL must use https:// in production")
 
         if self.rate_limit_enabled and self.rate_limit_per_minute <= 0:
             errors.append(
@@ -193,14 +298,61 @@ class Settings(BaseSettings):
 
         if self.max_request_body_bytes <= 0:
             errors.append("MAX_REQUEST_BODY_BYTES must be greater than 0")
-        elif self.max_request_body_bytes > _MAX_REQUEST_BODY_BYTES:
+        elif (
+            self.app_env.lower() == "production"
+            and self.max_request_body_bytes > _MAX_REQUEST_BODY_BYTES
+        ):
             errors.append(
                 f"MAX_REQUEST_BODY_BYTES must not exceed {_MAX_REQUEST_BODY_BYTES} in production"
             )
+        return errors
 
-        if errors:
-            raise ValueError("; ".join(errors))
-        return self
+    def _validate_env_config(self, errors: list[str]) -> None:
+        """Validate the single-profile environment-based configuration."""
+        domains = self.allowed_domains_set
+        if not domains or domains == frozenset({"example.com"}):
+            errors.append(
+                "ALLOWED_DOMAINS must be set to your real domain(s) in production "
+                "(not example.com)"
+            )
+
+        if self.imap_host == _PLACEHOLDER_IMAP_HOST and self.smtp_host == _PLACEHOLDER_SMTP_HOST:
+            errors.append(
+                "IMAP_HOST and SMTP_HOST still use placeholder mail.example.com in production"
+            )
+
+    def _validate_domain_config(self, errors: list[str]) -> None:
+        """Validate the per-domain YAML configuration."""
+        if not self.domain_configs:
+            errors.append("CONFIG_FILE must define at least one domain")
+            return
+
+        if self.app_env.lower() != "production":
+            return
+
+        if self.allowed_domains.strip() == "example.com":
+            # Ignore placeholder env domains when YAML mode is active.
+            pass
+
+        for domain, domain_settings in self.domain_configs.items():
+            if domain == "example.com":
+                errors.append("CONFIG_FILE must not use example.com in production")
+            if (
+                domain_settings.imap.host == _PLACEHOLDER_IMAP_HOST
+                and domain_settings.smtp.host == _PLACEHOLDER_SMTP_HOST
+            ):
+                errors.append(
+                    f"CONFIG_FILE domain {domain} still uses placeholder mail.example.com"
+                )
+
+    def domain_settings_for(self, domain: str) -> DomainMailSettings | None:
+        """Return the resolved per-domain mail settings for a normalized domain."""
+        normalized = domain.strip().lower()
+        if self.domain_configs:
+            return self.domain_configs.get(normalized)
+        if normalized not in self.allowed_domains_set:
+            return None
+        return DomainMailSettings.from_env_settings(self)
 
 
 class SettingsProvider(Protocol):

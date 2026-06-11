@@ -6,6 +6,38 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-12
+
+### What's new
+
+- Production-complete release before `1.0`: multi-domain YAML config, deployment docs, `/ready`, and optional JSON access logs.
+
+### What this means
+
+- You can run one container for multiple mail domains via mounted `config/config.yaml`, or keep the existing single-profile ENV mode.
+- Reverse-proxy, DNS, client, and troubleshooting guides now live in `docs/`.
+
+### Action required
+
+- If you upgrade from `0.2.x`, review the updated README and mount `./config:/config:ro` when using YAML mode.
+- Set `TRUSTED_PROXY_IPS` when `TRUST_PROXY_HEADERS=true` in production (unchanged from `0.2.2`).
+
+### Added
+
+- Optional multi-domain YAML config via `CONFIG_FILE` with per-domain IMAP/SMTP/POP3 settings.
+- `GET /ready` readiness endpoint for container and reverse-proxy health checks.
+- Optional structured JSON access logs via `STRUCTURED_JSON_LOGS=true`.
+- In-repo deployment guides under `docs/` plus sample multi-domain config in `config/config.example.yaml`.
+
+### Changed
+
+- Apple Mail `.mobileconfig` downloads now use clearer per-domain filenames and mailbox-specific profile labels.
+- Docker Compose examples now mount `/config` and expose the new config/logging settings.
+
+### Fixed
+
+- Reject YAML config files that define an empty `domains` map instead of silently falling back to ENV mode.
+
 ## [0.2.3] - 2026-06-12
 
 ### What's new
