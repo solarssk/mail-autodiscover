@@ -5,7 +5,7 @@
 
 services:
   mail-autodiscover:
-    image: ghcr.io/solarssk/mail-autodiscover:${IMAGE_TAG:-0.2.2}
+    image: ghcr.io/solarssk/mail-autodiscover:${IMAGE_TAG:-0.3.0}
     container_name: ${CONTAINER_NAME:-mail-autodiscover}
     restart: unless-stopped
     ports:
@@ -19,6 +19,7 @@ services:
       APP_NAME: ${APP_NAME:-mail-autodiscover}
       APP_ENV: ${APP_ENV:-production}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://autodiscover.example.com}
+      CONFIG_FILE: ${CONFIG_FILE:-/config/config.yaml}
       ALLOWED_DOMAINS: ${ALLOWED_DOMAINS:-example.com}
       MAIL_DISPLAY_NAME: ${MAIL_DISPLAY_NAME:-Example Mail}
       MAIL_DISPLAY_SHORT_NAME: ${MAIL_DISPLAY_SHORT_NAME:-Example}
@@ -34,11 +35,14 @@ services:
       CONTAINER_PORT: "${CONTAINER_PORT:-8000}"
       TRUST_PROXY_HEADERS: "${TRUST_PROXY_HEADERS:-false}"
       TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
-      ACCESS_LOG_SKIP_PATHS: ${ACCESS_LOG_SKIP_PATHS:-/health,/favicon.ico,/apple-touch-icon.png}
+      ACCESS_LOG_SKIP_PATHS: ${ACCESS_LOG_SKIP_PATHS:-/health,/ready,/favicon.ico,/apple-touch-icon.png}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      STRUCTURED_JSON_LOGS: "${STRUCTURED_JSON_LOGS:-false}"
       MAX_REQUEST_BODY_BYTES: "${MAX_REQUEST_BODY_BYTES:-16384}"
       RATE_LIMIT_ENABLED: "${RATE_LIMIT_ENABLED:-true}"
       RATE_LIMIT_PER_MINUTE: "${RATE_LIMIT_PER_MINUTE:-60}"
+      RATE_LIMIT_MAX_CLIENTS: "${RATE_LIMIT_MAX_CLIENTS:-10000}"
+      RATE_LIMIT_CLEANUP_INTERVAL_SECONDS: "${RATE_LIMIT_CLEANUP_INTERVAL_SECONDS:-300}"
       SECURITY_HEADERS_ENABLED: "${SECURITY_HEADERS_ENABLED:-true}"
       OUTLOOK_ENABLED: "${OUTLOOK_ENABLED:-true}"
       THUNDERBIRD_ENABLED: "${THUNDERBIRD_ENABLED:-true}"
@@ -50,3 +54,5 @@ services:
       POP3_AUTHENTICATION: ${POP3_AUTHENTICATION:-password-cleartext}
       RETURN_404_FOR_UNKNOWN_DOMAIN: "${RETURN_404_FOR_UNKNOWN_DOMAIN:-true}"
       DISABLE_ACCESS_LOG: "${DISABLE_ACCESS_LOG:-false}"
+    volumes:
+      - ./config:/config:ro

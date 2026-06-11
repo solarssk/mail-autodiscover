@@ -7,6 +7,8 @@ services:
       - .env
     ports:
       - "${HOST_PORT:-8088}:${CONTAINER_PORT:-8000}"
+    volumes:
+      - ./config:/config:ro
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\\\"CONTAINER_PORT\\\", \\\"8000\\\")}/health')\""]
       interval: 30s

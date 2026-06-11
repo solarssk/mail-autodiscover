@@ -18,7 +18,9 @@ def test_mobileconfig_returns_plist_for_allowed_domain() -> None:
         )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/x-apple-aspen-config")
-    assert "mail-autodiscover.mobileconfig" in response.headers.get("content-disposition", "")
+    assert "mail-autodiscover-example.com.mobileconfig" in response.headers.get(
+        "content-disposition", ""
+    )
 
     profile = plistlib.loads(response.content)
     assert profile["PayloadType"] == "Configuration"
@@ -26,6 +28,8 @@ def test_mobileconfig_returns_plist_for_allowed_domain() -> None:
     assert mail["PayloadType"] == "com.apple.mail.managed"
     assert mail["EmailAccountType"] == "EmailTypeIMAP"
     assert mail["EmailAddress"] == "user@example.com"
+    assert "user@example.com" in profile["PayloadDisplayName"]
+    assert "user@example.com" in mail["PayloadDisplayName"]
     assert mail["IncomingMailServerHostName"] == "mail.example.com"
     assert mail["IncomingMailServerPortNumber"] == 993
     assert mail["OutgoingMailServerHostName"] == "mail.example.com"

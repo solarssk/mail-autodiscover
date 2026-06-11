@@ -2,7 +2,7 @@
 
 This document is for maintainers and admins who need the detailed security model behind `mail-autodiscover`.
 
-If you are looking for setup help, start with [`README.md`](README.md) and the [GitHub Wiki](https://github.com/solarssk/mail-autodiscover/wiki).
+If you are looking for setup help, start with [`README.md`](README.md) and the in-repo `docs/` guides.
 
 ## What this service is allowed to do
 
@@ -38,6 +38,7 @@ That means the service must not reveal whether `alice@example.com` exists while 
 ## Public endpoints
 
 - `GET /health`
+- `GET /ready`
 - `GET /`
 - `GET /robots.txt`
 - `GET /favicon.ico`
@@ -49,7 +50,7 @@ That means the service must not reveal whether `alice@example.com` exists while 
 - `POST /autodiscover/autodiscover.xml`
 - `GET /autodiscover/autodiscover.xml`
 
-There is no admin API in the current version. All configuration is supplied through environment variables.
+There is no admin API in the current version. Configuration comes from environment variables or an optional mounted YAML file.
 
 ## Data handling
 
@@ -58,7 +59,7 @@ There is no admin API in the current version. All configuration is supplied thro
 | Full email addresses | No | Logs include only `domain_allowed=true/false` and a hashed domain prefix |
 | Request XML body | No | Request bodies are never logged |
 | Client IP | Yes | Stored in the unified access log as `client_ip=` |
-| IMAP/SMTP hosts | Returned to clients | Comes from environment variables, not from a user database |
+| IMAP/SMTP hosts | Returned to clients | Comes from ENV or mounted YAML config, not from a user database |
 
 ## Built-in mitigations
 
@@ -91,7 +92,7 @@ This service does not log full email addresses, but your reverse proxy may log t
 
 `.mobileconfig` profiles are generated without a code-signing certificate. iOS and macOS warn that the profile is unsigned before installation. That is expected for self-hosted mail setup.
 
-Profile identifiers are stable per domain so users can re-download and update the same profile instead of accumulating duplicates.
+Profile identifiers are stable per mailbox so users can re-download and update the same profile instead of accumulating duplicates.
 
 ## What not to add casually
 

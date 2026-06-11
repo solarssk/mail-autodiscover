@@ -8,3 +8,9 @@ def test_ghcr_compose_maps_container_port() -> None:
     ports_line = next(line for line in content.splitlines() if "HOST_PORT" in line)
     assert "${CONTAINER_PORT:-8000}" in ports_line
     assert ports_line.strip() == '- "${HOST_PORT:-8088}:${CONTAINER_PORT:-8000}"'
+
+
+def test_ghcr_compose_exposes_config_mount_and_env() -> None:
+    content = Path("docker-compose.ghcr.yml").read_text(encoding="utf-8")
+    assert "CONFIG_FILE: ${CONFIG_FILE:-/config/config.yaml}" in content
+    assert "- ./config:/config:ro" in content

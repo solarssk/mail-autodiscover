@@ -1,5 +1,6 @@
 """Tests for security features."""
 
+import json
 import logging
 
 import pytest
@@ -90,3 +91,23 @@ def test_health_not_logged_by_default(caplog: pytest.LogCaptureFixture) -> None:
         c.get("/health")
 
     assert not caplog.records
+
+
+def test_json_access_logs_are_structured(caplog: pytest.LogCaptureFixture) -> None:
+    reset_rate_limit_store()
+    settings = make_settings(
+        disable_access_log=False,
+        log_level="INFO",
+        structured_json_logs=True,
+    )
+    app = create_app(FixedSettingsProvider(settings))
+
+    with caplog.at_level(logging.INFO, logger="mail_autodiscover.access"), TestClient(app) as c:
+        c.get("/mail/config-v1.1.xml", params={"emailaddress": "secret.user@example.com"})
+
+    payload = json.loads(caplog.records[-1].message)
+    assert payload["event"] == "request"
+    assert payload["method"] == "GET"
+    assert payload["domain_allowed"] is True
+    assert payload["endpoint"] == "/mail/config-v1.1.xml"
+    assert "secret.user@example.com" not in caplog.records[-1].message
