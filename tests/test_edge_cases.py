@@ -13,6 +13,12 @@ def test_health_endpoint(client: TestClient) -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_ready_endpoint(client: TestClient) -> None:
+    response = client.get("/ready")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
+
+
 def test_outlook_disabled() -> None:
     reset_rate_limit_store()
     settings = make_settings(outlook_enabled=False)
@@ -49,6 +55,15 @@ def test_security_headers_disabled() -> None:
         response = c.get("/health")
     assert response.headers.get("X-Content-Type-Options") is None
     assert response.headers.get("Cache-Control") is None
+
+
+def test_ready_not_rate_limited() -> None:
+    reset_rate_limit_store()
+    settings = make_settings(rate_limit_enabled=True, rate_limit_per_minute=1)
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as c:
+        for _ in range(4):
+            assert c.get("/ready").status_code == 200
 
 
 def test_thunderbird_pop3_block_when_enabled() -> None:
@@ -116,6 +131,38 @@ def test_get_client_ip_ignores_forwarded_header_from_untrusted_peer() -> None:
         client = FakeClient()
 
     assert get_client_ip(FakeRequest(), settings) == "203.0.113.99"  # type: ignore[arg-type]
+
+
+def test_get_client_ip_ignores_forwarded_when_no_trusted_ips() -> None:
+    settings = make_settings(
+        trust_proxy_headers=True,
+        trusted_proxy_ips="",
+    )
+
+    class FakeClient:
+        host = "203.0.113.99"
+
+    class FakeRequest:
+        headers = {"X-Forwarded-For": "1.2.3.4"}
+        client = FakeClient()
+
+    assert get_client_ip(FakeRequest(), settings) == "203.0.113.99"  # type: ignore[arg-type]
+
+
+def test_get_client_ip_ignores_invalid_forwarded_header() -> None:
+    settings = make_settings(
+        trust_proxy_headers=True,
+        trusted_proxy_ips="127.0.0.1/32",
+    )
+
+    class FakeClient:
+        host = "127.0.0.1"
+
+    class FakeRequest:
+        headers = {"X-Forwarded-For": "not-an-ip"}
+        client = FakeClient()
+
+    assert get_client_ip(FakeRequest(), settings) == "127.0.0.1"  # type: ignore[arg-type]
 
 
 def test_get_client_ip_uses_x_real_ip_when_peer_trusted() -> None:

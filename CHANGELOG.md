@@ -6,6 +6,97 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-12
+
+### What's new
+
+- Production-complete release before `1.0`: multi-domain YAML config, deployment docs, `/ready`, and optional JSON access logs.
+
+### What this means
+
+- You can run one container for multiple mail domains via mounted `config/config.yaml`, or keep the existing single-profile ENV mode.
+- Reverse-proxy, DNS, client, and troubleshooting guides now live in `docs/`.
+
+### Action required
+
+- If you upgrade from `0.2.x`, review the updated README and mount `./config:/config:ro` when using YAML mode.
+- Set `TRUSTED_PROXY_IPS` when `TRUST_PROXY_HEADERS=true` in production (unchanged from `0.2.2`).
+
+### Added
+
+- Optional multi-domain YAML config via `CONFIG_FILE` with per-domain IMAP/SMTP/POP3 settings.
+- `GET /ready` readiness endpoint for container and reverse-proxy health checks.
+- Optional structured JSON access logs via `STRUCTURED_JSON_LOGS=true`.
+- In-repo deployment guides under `docs/` plus sample multi-domain config in `config/config.example.yaml`.
+
+### Changed
+
+- Apple Mail `.mobileconfig` downloads now use clearer per-domain filenames and mailbox-specific profile labels.
+- Docker Compose examples now mount `/config` and expose the new config/logging settings.
+
+### Fixed
+
+- Reject YAML config files that define an empty `domains` map instead of silently falling back to ENV mode.
+
+## [0.2.3] - 2026-06-12
+
+### What's new
+
+- This is a small follow-up release that closes a rate-limit configuration gap introduced in `0.2.2`.
+
+### What this means
+
+- Production deployments now reject `RATE_LIMIT_MAX_CLIENTS <= 0` instead of accepting a value that would silently weaken throttling behavior.
+
+### Action required
+
+- No action required if you already use a positive `RATE_LIMIT_MAX_CLIENTS` value.
+- If you explicitly set `RATE_LIMIT_MAX_CLIENTS=0` or a negative value, replace it with a positive number before upgrading.
+
+### Fixed
+
+- Reject non-positive `RATE_LIMIT_MAX_CLIENTS` values when rate limiting is enabled, preventing ineffective throttling caused by immediate client-eviction behavior.
+
+## [0.2.2] - 2026-06-12
+
+### What's new
+
+- Production deployments now fail fast on unsafe placeholder configuration instead of starting with `example.com` defaults.
+- Reverse-proxy trust is safer by default: forwarded headers require explicit trusted proxy CIDRs.
+
+### What this means
+
+- Misconfigured production stacks surface a clear startup error instead of silently serving placeholder mail settings.
+- Rate limiting uses a bounded in-memory store with periodic cleanup, reducing memory growth under abuse.
+
+### Action required
+
+- If you run behind a reverse proxy with `TRUST_PROXY_HEADERS=true`, set `TRUSTED_PROXY_IPS` to your proxy or Docker bridge CIDRs before upgrading to `0.2.2` in production.
+- Review reverse-proxy access logs: Thunderbird and Apple Mail endpoints pass `emailaddress` in the query string.
+
+### Security
+
+- Default `TRUST_PROXY_HEADERS` changed to `false`; empty `TRUSTED_PROXY_IPS` no longer trusts all peers.
+- `X-Forwarded-For` and `X-Real-IP` values are validated as real IP addresses before use.
+- Production startup validation for HTTPS `PUBLIC_BASE_URL`, real domains, and proxy trust settings.
+
+### Added
+
+- `RATE_LIMIT_MAX_CLIENTS` and `RATE_LIMIT_CLEANUP_INTERVAL_SECONDS` for bounded rate-limit storage.
+- Stable UUIDv5 identifiers in Apple `.mobileconfig` profiles (re-download updates the same profile).
+- Healthcheck in `docker-compose.ghcr.yml`.
+
+### Changed
+
+- `TRUST_PROXY_HEADERS` default is now `false` in application config, `.env.example`, and GHCR compose.
+- Trivy blocks CRITICAL vulnerabilities on pull requests; `main` keeps advisory SARIF upload.
+
+### Fixed
+
+- `docker-compose.ghcr.yml` port mapping now respects `CONTAINER_PORT`.
+- Apple `.mobileconfig` `PayloadIdentifier` values are account-specific so multiple mailboxes on one domain do not collide.
+- `docker-compose.ghcr.yml` default `IMAGE_TAG` matches the release version (`0.2.2`).
+
 ## [0.2.1] - 2026-06-11
 
 ### What's new
@@ -139,8 +230,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.1...HEAD
-[0.2.1]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.2.1
+[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.2.3
+[0.2.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.2...v0.2.3
+[0.2.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.1...v0.2.2
 [0.2.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.0...v0.2.1
 [0.1.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.1.2...v0.2.0
 [0.1.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.1.1...v0.1.2

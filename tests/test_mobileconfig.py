@@ -18,7 +18,9 @@ def test_mobileconfig_returns_plist_for_allowed_domain() -> None:
         )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/x-apple-aspen-config")
-    assert "mail-autodiscover.mobileconfig" in response.headers.get("content-disposition", "")
+    assert "mail-autodiscover-example.com.mobileconfig" in response.headers.get(
+        "content-disposition", ""
+    )
 
     profile = plistlib.loads(response.content)
     assert profile["PayloadType"] == "Configuration"
@@ -26,6 +28,8 @@ def test_mobileconfig_returns_plist_for_allowed_domain() -> None:
     assert mail["PayloadType"] == "com.apple.mail.managed"
     assert mail["EmailAccountType"] == "EmailTypeIMAP"
     assert mail["EmailAddress"] == "user@example.com"
+    assert "user@example.com" in profile["PayloadDisplayName"]
+    assert "user@example.com" in mail["PayloadDisplayName"]
     assert mail["IncomingMailServerHostName"] == "mail.example.com"
     assert mail["IncomingMailServerPortNumber"] == 993
     assert mail["OutgoingMailServerHostName"] == "mail.example.com"
@@ -54,6 +58,51 @@ def test_mobileconfig_wellknown_alias() -> None:
             params={"emailaddress": "user@example.com"},
         )
     assert response.status_code == 200
+
+
+def test_mobileconfig_stable_identifiers() -> None:
+    settings = make_settings()
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as client:
+        first = client.get(
+            "/mail/ios.mobileconfig",
+            params={"emailaddress": "user@example.com"},
+        )
+        second = client.get(
+            "/mail/ios.mobileconfig",
+            params={"emailaddress": "user@example.com"},
+        )
+
+    profile_a = plistlib.loads(first.content)
+    profile_b = plistlib.loads(second.content)
+    assert profile_a["PayloadUUID"] == profile_b["PayloadUUID"]
+    assert profile_a["PayloadIdentifier"] == profile_b["PayloadIdentifier"]
+    mail_a = profile_a["PayloadContent"][0]
+    mail_b = profile_b["PayloadContent"][0]
+    assert mail_a["PayloadUUID"] == mail_b["PayloadUUID"]
+    assert mail_a["PayloadIdentifier"] == mail_b["PayloadIdentifier"]
+
+
+def test_mobileconfig_identifiers_differ_per_account() -> None:
+    settings = make_settings()
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as client:
+        first = client.get(
+            "/mail/ios.mobileconfig",
+            params={"emailaddress": "user1@example.com"},
+        )
+        second = client.get(
+            "/mail/ios.mobileconfig",
+            params={"emailaddress": "user2@example.com"},
+        )
+
+    profile_a = plistlib.loads(first.content)
+    profile_b = plistlib.loads(second.content)
+    assert profile_a["PayloadIdentifier"] != profile_b["PayloadIdentifier"]
+    assert (
+        profile_a["PayloadContent"][0]["PayloadIdentifier"]
+        != profile_b["PayloadContent"][0]["PayloadIdentifier"]
+    )
 
 
 def test_mobileconfig_disabled() -> None:

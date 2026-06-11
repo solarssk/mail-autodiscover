@@ -14,7 +14,11 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTex
 from app.config import EnvSettingsProvider, Settings, SettingsProvider
 from app.email_utils import EmailValidationError, validate_email
 from app.landing import landing_page_html, robots_txt
-from app.mobileconfig import MOBILECONFIG_CONTENT_TYPE, apple_mail_mobileconfig
+from app.mobileconfig import (
+    MOBILECONFIG_CONTENT_TYPE,
+    apple_mail_mobileconfig,
+    mobileconfig_filename,
+)
 from app.security import SecurityMiddleware, hash_domain, parse_outlook_email_address
 from app.templates import outlook_autodiscover, outlook_get_neutral_response, thunderbird_autoconfig
 
@@ -82,6 +86,10 @@ def create_app(settings_provider: SettingsProvider | None = None) -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/ready")
+    async def ready() -> dict[str, str]:
+        return {"status": "ready"}
+
     @app.get("/", response_class=HTMLResponse)
     async def root(settings: Annotated[Settings, Depends(get_settings)]) -> HTMLResponse:
         return HTMLResponse(content=landing_page_html(settings.app_name))
@@ -114,9 +122,15 @@ def create_app(settings_provider: SettingsProvider | None = None) -> FastAPI:
             request.state.domain_allowed = False
             return _domain_error_response(settings)
 
+        assert validated is not None
+        domain_settings = settings.domain_settings_for(validated.domain)
+        if domain_settings is None:
+            request.state.domain_allowed = False
+            return _domain_error_response(settings)
+
         request.state.domain_allowed = True
-        request.state.domain_hash = hash_domain(validated.domain)  # type: ignore[union-attr]
-        xml = thunderbird_autoconfig(validated, settings)  # type: ignore[arg-type]
+        request.state.domain_hash = hash_domain(validated.domain)
+        xml = thunderbird_autoconfig(validated, domain_settings, settings.username_format)
         return _xml_response(xml)
 
     async def _apple_mobileconfig(
@@ -135,14 +149,22 @@ def create_app(settings_provider: SettingsProvider | None = None) -> FastAPI:
             request.state.domain_allowed = False
             return _domain_error_response(settings)
 
+        assert validated is not None
+        domain_settings = settings.domain_settings_for(validated.domain)
+        if domain_settings is None:
+            request.state.domain_allowed = False
+            return _domain_error_response(settings)
+
         request.state.domain_allowed = True
-        request.state.domain_hash = hash_domain(validated.domain)  # type: ignore[union-attr]
-        body = apple_mail_mobileconfig(validated, settings)  # type: ignore[arg-type]
+        request.state.domain_hash = hash_domain(validated.domain)
+        body = apple_mail_mobileconfig(validated, domain_settings, settings.username_format)
         return Response(
             content=body,
             media_type=MOBILECONFIG_CONTENT_TYPE,
             headers={
-                "Content-Disposition": 'attachment; filename="mail-autodiscover.mobileconfig"'
+                "Content-Disposition": (
+                    f'attachment; filename="{mobileconfig_filename(validated.domain)}"'
+                )
             },
         )
 
@@ -201,9 +223,15 @@ def create_app(settings_provider: SettingsProvider | None = None) -> FastAPI:
                 return _domain_error_response(settings)
             return _invalid_request()
 
+        assert validated is not None
+        domain_settings = settings.domain_settings_for(validated.domain)
+        if domain_settings is None:
+            request.state.domain_allowed = False
+            return _domain_error_response(settings)
+
         request.state.domain_allowed = True
-        request.state.domain_hash = hash_domain(validated.domain)  # type: ignore[union-attr]
-        xml = outlook_autodiscover(validated, settings)  # type: ignore[arg-type]
+        request.state.domain_hash = hash_domain(validated.domain)
+        xml = outlook_autodiscover(validated, domain_settings, settings.username_format)
         return _xml_response(xml)
 
     @app.get("/autodiscover/autodiscover.xml")

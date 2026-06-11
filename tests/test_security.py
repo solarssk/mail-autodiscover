@@ -1,12 +1,13 @@
 """Tests for security features."""
 
+import json
 import logging
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.security import reset_rate_limit_store
+from app.security import _rate_limit_store, is_rate_limited, reset_rate_limit_store
 from tests.conftest import FixedSettingsProvider, make_settings
 
 
@@ -63,6 +64,24 @@ def test_logs_do_not_contain_full_email(caplog: pytest.LogCaptureFixture) -> Non
     assert "method=GET" in log_text
 
 
+def test_rate_limit_evicts_oldest_clients_when_over_capacity() -> None:
+    reset_rate_limit_store()
+    settings = make_settings(
+        rate_limit_enabled=True,
+        rate_limit_per_minute=100,
+        rate_limit_max_clients=2,
+        rate_limit_cleanup_interval_seconds=0,
+    )
+
+    assert is_rate_limited("203.0.113.1", settings) is False
+    assert is_rate_limited("203.0.113.2", settings) is False
+    assert len(_rate_limit_store) == 2
+
+    assert is_rate_limited("203.0.113.3", settings) is False
+    assert len(_rate_limit_store) == 2
+    assert "203.0.113.1" not in _rate_limit_store
+
+
 def test_health_not_logged_by_default(caplog: pytest.LogCaptureFixture) -> None:
     reset_rate_limit_store()
     settings = make_settings(disable_access_log=False, log_level="INFO")
@@ -72,3 +91,23 @@ def test_health_not_logged_by_default(caplog: pytest.LogCaptureFixture) -> None:
         c.get("/health")
 
     assert not caplog.records
+
+
+def test_json_access_logs_are_structured(caplog: pytest.LogCaptureFixture) -> None:
+    reset_rate_limit_store()
+    settings = make_settings(
+        disable_access_log=False,
+        log_level="INFO",
+        structured_json_logs=True,
+    )
+    app = create_app(FixedSettingsProvider(settings))
+
+    with caplog.at_level(logging.INFO, logger="mail_autodiscover.access"), TestClient(app) as c:
+        c.get("/mail/config-v1.1.xml", params={"emailaddress": "secret.user@example.com"})
+
+    payload = json.loads(caplog.records[-1].message)
+    assert payload["event"] == "request"
+    assert payload["method"] == "GET"
+    assert payload["domain_allowed"] is True
+    assert payload["endpoint"] == "/mail/config-v1.1.xml"
+    assert "secret.user@example.com" not in caplog.records[-1].message

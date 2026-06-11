@@ -1,0 +1,40 @@
+domains:
+  example.com:
+    display_name: Example Mail
+    display_short_name: Example
+    imap:
+      host: mail.example.com
+      port: 993
+      socket_type: SSL
+      authentication: password-cleartext
+    smtp:
+      host: mail.example.com
+      port: 587
+      socket_type: STARTTLS
+      authentication: password-cleartext
+    pop3:
+      enabled: false
+      host: mail.example.com
+      port: 995
+      socket_type: SSL
+      authentication: password-cleartext
+
+  example.org:
+    display_name: Example Org Mail
+    display_short_name: Example Org
+    imap:
+      host: mail.example.org
+      port: 993
+      socket_type: SSL
+      authentication: password-cleartext
+    smtp:
+      host: mail.example.org
+      port: 587
+      socket_type: STARTTLS
+      authentication: password-cleartext
+    pop3:
+      enabled: true
+      host: mail.example.org
+      port: 995
+      socket_type: SSL
+      authentication: password-cleartext

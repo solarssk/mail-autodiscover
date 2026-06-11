@@ -2,7 +2,7 @@
 
 This document is for maintainers and admins who need the detailed security model behind `mail-autodiscover`.
 
-If you are looking for setup help, start with [`README.md`](README.md) and the [GitHub Wiki](https://github.com/solarssk/mail-autodiscover/wiki).
+If you are looking for setup help, start with [`README.md`](README.md) and the in-repo `docs/` guides.
 
 ## What this service is allowed to do
 
@@ -38,6 +38,7 @@ That means the service must not reveal whether `alice@example.com` exists while 
 ## Public endpoints
 
 - `GET /health`
+- `GET /ready`
 - `GET /`
 - `GET /robots.txt`
 - `GET /favicon.ico`
@@ -49,7 +50,7 @@ That means the service must not reveal whether `alice@example.com` exists while 
 - `POST /autodiscover/autodiscover.xml`
 - `GET /autodiscover/autodiscover.xml`
 
-There is no admin API in the current version. All configuration is supplied through environment variables.
+There is no admin API in the current version. Configuration comes from environment variables or an optional mounted YAML file.
 
 ## Data handling
 
@@ -58,14 +59,14 @@ There is no admin API in the current version. All configuration is supplied thro
 | Full email addresses | No | Logs include only `domain_allowed=true/false` and a hashed domain prefix |
 | Request XML body | No | Request bodies are never logged |
 | Client IP | Yes | Stored in the unified access log as `client_ip=` |
-| IMAP/SMTP hosts | Returned to clients | Comes from environment variables, not from a user database |
+| IMAP/SMTP hosts | Returned to clients | Comes from ENV or mounted YAML config, not from a user database |
 
 ## Built-in mitigations
 
 - Safe XML parsing with `defusedxml`
 - Request body size limit
 - XML output escaping
-- Rate limiting per IP with `RATE_LIMIT_PER_MINUTE`
+- Rate limiting per IP with `RATE_LIMIT_PER_MINUTE` and bounded in-memory storage
 - Security headers such as `nosniff`, `no-referrer`, `DENY`, and `no-store`
 - Neutral error responses that do not expose your domain list
 - Non-root container user
@@ -79,6 +80,19 @@ There is no admin API in the current version. All configuration is supplied thro
 4. Keep `ALLOWED_DOMAINS` limited to domains you actually operate.
 5. Do not expose the container directly to the public internet without TLS.
 6. In production, pin GHCR images by semver tag or digest instead of using `latest`.
+7. With `APP_ENV=production`, the service refuses to start on placeholder values (`example.com`, `mail.example.com`, `http://localhost`, missing `TRUSTED_PROXY_IPS` when proxy trust is on).
+
+## Reverse proxy logging
+
+Thunderbird Autoconfig and Apple Mail profile URLs include `?emailaddress=user@example.com` in the query string. Mail clients require this parameter.
+
+This service does not log full email addresses, but your reverse proxy may log the full request URI unless you configure it otherwise. Review access-log settings for paths such as `/mail/config-v1.1.xml`, `/.well-known/autoconfig/`, and `/mail/ios.mobileconfig`.
+
+## Apple Mail profiles
+
+`.mobileconfig` profiles are generated without a code-signing certificate. iOS and macOS warn that the profile is unsigned before installation. That is expected for self-hosted mail setup.
+
+Profile identifiers are stable per mailbox so users can re-download and update the same profile instead of accumulating duplicates.
 
 ## What not to add casually
 

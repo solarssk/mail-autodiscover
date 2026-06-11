@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mail-autodiscover"
-version = "0.2.1"
+version = "0.3.0"
 description = "Lightweight Outlook Autodiscover and Thunderbird Autoconfig service for self-hosted mail servers"
 readme = "README.md"
 license = "MIT"
@@ -13,6 +13,7 @@ dependencies = [
     "defusedxml>=0.7.1",
     "fastapi>=0.115.0",
     "pydantic-settings>=2.6.0",
+    "PyYAML>=6.0.2",
     "uvicorn[standard]>=0.32.0",
 ]
 
