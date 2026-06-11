@@ -79,6 +79,28 @@ def test_mobileconfig_stable_identifiers() -> None:
     assert mail_a["PayloadIdentifier"] == mail_b["PayloadIdentifier"]
 
 
+def test_mobileconfig_identifiers_differ_per_account() -> None:
+    settings = make_settings()
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as client:
+        first = client.get(
+            "/mail/ios.mobileconfig",
+            params={"emailaddress": "user1@example.com"},
+        )
+        second = client.get(
+            "/mail/ios.mobileconfig",
+            params={"emailaddress": "user2@example.com"},
+        )
+
+    profile_a = plistlib.loads(first.content)
+    profile_b = plistlib.loads(second.content)
+    assert profile_a["PayloadIdentifier"] != profile_b["PayloadIdentifier"]
+    assert (
+        profile_a["PayloadContent"][0]["PayloadIdentifier"]
+        != profile_b["PayloadContent"][0]["PayloadIdentifier"]
+    )
+
+
 def test_mobileconfig_disabled() -> None:
     settings = make_settings(apple_mobileconfig_enabled=False)
     app = create_app(FixedSettingsProvider(settings))

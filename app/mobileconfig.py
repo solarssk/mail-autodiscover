@@ -32,8 +32,9 @@ def apple_mail_mobileconfig(validated: ValidatedEmail, settings: Settings) -> by
             f"profile:{validated.email}:{settings.imap_host}",
         )
     ).upper()
-    mail_identifier = f"com.mail-autodiscover.mail.{validated.domain}"
-    root_identifier = f"com.mail-autodiscover.profile.{validated.domain}"
+    account_id = uuid.uuid5(_PROFILE_NAMESPACE, validated.email).hex
+    mail_identifier = f"com.mail-autodiscover.mail.{validated.domain}.{account_id}"
+    root_identifier = f"com.mail-autodiscover.profile.{validated.domain}.{account_id}"
 
     mail_payload: dict[str, object] = {
         "PayloadType": "com.apple.mail.managed",

@@ -43,6 +43,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Fixed
 
 - `docker-compose.ghcr.yml` port mapping now respects `CONTAINER_PORT`.
+- Apple `.mobileconfig` `PayloadIdentifier` values are account-specific so multiple mailboxes on one domain do not collide.
+- `docker-compose.ghcr.yml` default `IMAGE_TAG` matches the release version (`0.2.2`).
 
 ## [0.2.1] - 2026-06-11
 
