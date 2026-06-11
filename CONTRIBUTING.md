@@ -59,9 +59,21 @@ Use labels to classify issues and PRs:
 - Update `CHANGELOG.md` and `pyproject.toml` version on `main` via PR.
 - Images are published to **GHCR** on every push to `main` and on version tags `v*`.
 
+Keep the audience in mind:
+
+- `README.md` is the user/admin landing page.
+- `wiki/` contains the GitHub Wiki-ready user and admin documentation.
+- `CONTRIBUTING.md` stays maintainer-focused.
+
 ### CHANGELOG format
 
-Use [Keep a Changelog](https://keepachangelog.com/) sections — they map to emoji in release notes:
+Each release entry should begin with the plain-language sections below:
+
+- `### What's new`
+- `### What this means`
+- `### Action required`
+
+After that, use [Keep a Changelog](https://keepachangelog.com/) sections for the technical breakdown. They map to emoji in release notes:
 
 | CHANGELOG | Release section |
 |-----------|-----------------|
@@ -70,6 +82,8 @@ Use [Keep a Changelog](https://keepachangelog.com/) sections — they map to emo
 | `### Fixed` | 🐛 Fixed |
 | `### Security` | 🔒 Security |
 | `### Note` | 📝 Note |
+
+If no upgrade step is needed, write `- No action required.`
 
 ### Cut a release
 
@@ -81,7 +95,12 @@ git tag v0.1.2
 git push origin v0.1.2
 ```
 
-The **Release** workflow reads `CHANGELOG.md` and publishes formatted notes (emoji sections + Docker block).
+The **Release** workflow reads `CHANGELOG.md` and publishes formatted notes with:
+
+- a short human summary,
+- a clear `Action required` or `No action required` section,
+- the technical emoji sections,
+- Docker tags and documentation links.
 
 Preview locally:
 
