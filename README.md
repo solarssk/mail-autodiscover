@@ -67,10 +67,10 @@ Prebuilt images are published to GHCR:
 
 ```text
 ghcr.io/solarssk/mail-autodiscover:latest
-ghcr.io/solarssk/mail-autodiscover:0.2.0
+ghcr.io/solarssk/mail-autodiscover:<release-tag>
 ```
 
-`docker-compose.ghcr.yml` defaults to `latest`, which is published on every `main` build. Set `IMAGE_TAG` in `.env` or Portainer to a pinned semver tag in production.
+`latest` is published on every `main` build. Semver tags such as `0.2.1` appear when a matching `v*` Git tag is pushed. `docker-compose.ghcr.yml` defaults to `latest`; set `IMAGE_TAG` in `.env` or Portainer to a release tag in production.
 
 ```bash
 cp .env.example .env
