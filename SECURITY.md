@@ -2,7 +2,7 @@
 
 This document is for maintainers and admins who need the detailed security model behind `mail-autodiscover`.
 
-If you are looking for setup help, start with [`README.md`](README.md) and the [GitHub Wiki](https://github.com/solarssk/autodiscover/wiki).
+If you are looking for setup help, start with [`README.md`](README.md) and the [GitHub Wiki](https://github.com/solarssk/mail-autodiscover/wiki).
 
 ## What this service is allowed to do
 
@@ -94,7 +94,7 @@ Changes in the list below need a deliberate security review because they would a
 
 Please open a private security advisory instead of a public issue:
 
-[Create a private advisory](https://github.com/solarssk/autodiscover/security/advisories/new)
+[Create a private advisory](https://github.com/solarssk/mail-autodiscover/security/advisories/new)
 
 Include:
 

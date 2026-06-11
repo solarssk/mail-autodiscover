@@ -22,7 +22,7 @@ SUMMARY_SECTIONS = ("What's new", "What this means", "Action required")
 
 ROOT = Path(__file__).resolve().parent.parent
 CHANGELOG = ROOT / "CHANGELOG.md"
-IMAGE = "ghcr.io/solarssk/autodiscover"
+IMAGE = "ghcr.io/solarssk/mail-autodiscover"
 
 
 def parse_version(tag: str) -> str:
@@ -124,10 +124,10 @@ def docker_block(version: str, prerelease: bool) -> str:
             "",
             "## 📚 Links",
             "",
-            "- [Full CHANGELOG](https://github.com/solarssk/autodiscover/blob/main/CHANGELOG.md)",
-            "- [README](https://github.com/solarssk/autodiscover)",
-            "- [Wiki pages](https://github.com/solarssk/autodiscover/tree/main/wiki)",
-            "- [.env.example](https://github.com/solarssk/autodiscover/blob/main/.env.example)",
+            "- [Full CHANGELOG](https://github.com/solarssk/mail-autodiscover/blob/main/CHANGELOG.md)",
+            "- [README](https://github.com/solarssk/mail-autodiscover)",
+            "- [Wiki pages](https://github.com/solarssk/mail-autodiscover/tree/main/wiki)",
+            "- [.env.example](https://github.com/solarssk/mail-autodiscover/blob/main/.env.example)",
         ]
     )
     return "\n".join(lines)

@@ -33,7 +33,7 @@ def landing_page_html(app_name: str) -> str:
     <p>This host provides <strong>mail client autodiscovery</strong> only
        (Outlook, Thunderbird, Apple Mail profiles).</p>
     <p>It is not a webmail interface or administration panel.</p>
-    <p><a href="https://github.com/solarssk/autodiscover">Project on GitHub</a></p>
+    <p><a href="https://github.com/solarssk/mail-autodiscover">Project on GitHub</a></p>
   </main>
 </body>
 </html>"""

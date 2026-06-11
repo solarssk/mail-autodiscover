@@ -66,8 +66,8 @@ TRUSTED_PROXY_IPS=127.0.0.1,10.0.0.0/8
 Prebuilt images are published to GHCR:
 
 ```text
-ghcr.io/solarssk/autodiscover:latest
-ghcr.io/solarssk/autodiscover:0.2.0
+ghcr.io/solarssk/mail-autodiscover:latest
+ghcr.io/solarssk/mail-autodiscover:0.2.0
 ```
 
 Use a pinned version in production rather than `latest`.
@@ -81,18 +81,18 @@ The GHCR compose file reads the values you set in `.env` or in your Portainer en
 
 ## Wiki
 
-The full documentation lives in the [GitHub Wiki](https://github.com/solarssk/autodiscover/wiki):
+The full documentation lives in the [GitHub Wiki](https://github.com/solarssk/mail-autodiscover/wiki):
 
-- [`Home`](https://github.com/solarssk/autodiscover/wiki)
-- [`What This Project Does`](https://github.com/solarssk/autodiscover/wiki/What-This-Project-Does)
-- [`Quick Start`](https://github.com/solarssk/autodiscover/wiki/Quick-Start)
-- [`Deployment with Docker or Portainer`](https://github.com/solarssk/autodiscover/wiki/Deployment-with-Docker-or-Portainer)
-- [`Reverse Proxy and DNS`](https://github.com/solarssk/autodiscover/wiki/Reverse-Proxy-and-DNS)
-- [`Client Setup`](https://github.com/solarssk/autodiscover/wiki/Client-Setup:-Outlook,-Thunderbird,-Apple-Mail)
-- [`Configuration Reference`](https://github.com/solarssk/autodiscover/wiki/Configuration-Reference)
-- [`Upgrade Guide`](https://github.com/solarssk/autodiscover/wiki/Upgrade-Guide)
-- [`Security Model`](https://github.com/solarssk/autodiscover/wiki/Security-Model)
-- [`Troubleshooting`](https://github.com/solarssk/autodiscover/wiki/Troubleshooting)
+- [`Home`](https://github.com/solarssk/mail-autodiscover/wiki)
+- [`What This Project Does`](https://github.com/solarssk/mail-autodiscover/wiki/What-This-Project-Does)
+- [`Quick Start`](https://github.com/solarssk/mail-autodiscover/wiki/Quick-Start)
+- [`Deployment with Docker or Portainer`](https://github.com/solarssk/mail-autodiscover/wiki/Deployment-with-Docker-or-Portainer)
+- [`Reverse Proxy and DNS`](https://github.com/solarssk/mail-autodiscover/wiki/Reverse-Proxy-and-DNS)
+- [`Client Setup`](https://github.com/solarssk/mail-autodiscover/wiki/Client-Setup:-Outlook,-Thunderbird,-Apple-Mail)
+- [`Configuration Reference`](https://github.com/solarssk/mail-autodiscover/wiki/Configuration-Reference)
+- [`Upgrade Guide`](https://github.com/solarssk/mail-autodiscover/wiki/Upgrade-Guide)
+- [`Security Model`](https://github.com/solarssk/mail-autodiscover/wiki/Security-Model)
+- [`Troubleshooting`](https://github.com/solarssk/mail-autodiscover/wiki/Troubleshooting)
 
 ## End-user setup
 
@@ -143,7 +143,7 @@ Then install the downloaded profile and enter the mailbox password when prompted
 - Security headers enabled by default
 - No admin panel in the current version
 
-For the detailed security model, see [`SECURITY.md`](SECURITY.md) and the wiki page [`Security Model`](https://github.com/solarssk/autodiscover/wiki/Security-Model).
+For the detailed security model, see [`SECURITY.md`](SECURITY.md) and the wiki page [`Security Model`](https://github.com/solarssk/mail-autodiscover/wiki/Security-Model).
 
 ## Local development
 
