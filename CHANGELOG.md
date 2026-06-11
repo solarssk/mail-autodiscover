@@ -20,6 +20,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- GitHub repository renamed to `mail-autodiscover`; GHCR images publish as `ghcr.io/solarssk/mail-autodiscover`
+- Documentation now links to the GitHub Wiki instead of the in-repo `wiki/` folder
 - Replace flaky GitHub CodeQL default setup with explicit `.github/workflows/codeql.yml`
 
 ## [0.2.0] - 2026-06-10
@@ -126,13 +128,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Security middleware for rate limiting, headers, and safe logging
 - `pytest` test suite with coverage gate
 - Hardened CI with `gitleaks`, `ruff`, `mypy`, `bandit`, `pip-audit`, `deptry`, and Trivy
-- GHCR image publishing (`ghcr.io/solarssk/autodiscover`)
+- GHCR image publishing (`ghcr.io/solarssk/mail-autodiscover`)
 - `CONTRIBUTING.md`, `SECURITY.md`, issue templates, PR template, and Dependabot
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/autodiscover/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/solarssk/autodiscover/releases/tag/v0.2.0
-[0.1.2]: https://github.com/solarssk/autodiscover/compare/v0.1.2...v0.2.0
-[0.1.1]: https://github.com/solarssk/autodiscover/compare/v0.1.1...v0.1.2
-[0.1.0]: https://github.com/solarssk/autodiscover/releases/tag/v0.1.0
+[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.2.0
+[0.1.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.1.2...v0.2.0
+[0.1.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.1.1...v0.1.2
+[0.1.0]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.1.0

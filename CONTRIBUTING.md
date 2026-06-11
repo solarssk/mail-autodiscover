@@ -62,7 +62,7 @@ Use labels to classify issues and PRs:
 Keep the audience in mind:
 
 - `README.md` is the user/admin landing page.
-- `wiki/` contains the GitHub Wiki-ready user and admin documentation.
+- the GitHub Wiki contains the user and admin documentation.
 - `CONTRIBUTING.md` stays maintainer-focused.
 
 ### CHANGELOG format

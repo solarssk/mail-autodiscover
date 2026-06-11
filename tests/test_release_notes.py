@@ -14,7 +14,7 @@ def test_build_release_notes_v0_1_1() -> None:
     assert "### 🔄 Changed" in notes
     assert "actions/checkout" in notes
     assert "## 🐳 Docker" in notes
-    assert "ghcr.io/solarssk/autodiscover:0.1.1" in notes
+    assert "ghcr.io/solarssk/mail-autodiscover:0.1.1" in notes
     assert "## 📚 Links" in notes
 
 
