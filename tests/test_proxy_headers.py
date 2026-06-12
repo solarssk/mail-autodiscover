@@ -104,6 +104,18 @@ def test_invalid_forwarded_ip_is_ignored() -> None:
     assert get_client_ip(request, settings) == "127.0.0.1"  # type: ignore[arg-type]
 
 
+def test_mixed_valid_invalid_xff_chain_rejected() -> None:
+    settings = make_settings(
+        trust_proxy_headers=True,
+        trusted_proxy_ips="10.0.0.0/8",
+    )
+    request = _fake_request(
+        peer_host="10.0.0.1",
+        headers={"X-Forwarded-For": "198.51.100.7, garbage, 10.0.0.1"},
+    )
+    assert get_client_ip(request, settings) == "10.0.0.1"  # type: ignore[arg-type]
+
+
 def test_xff_parsed_right_to_left_skips_trusted() -> None:
     settings = make_settings(
         trust_proxy_headers=True,

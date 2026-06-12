@@ -246,7 +246,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.3.1
+[0.3.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.0...v0.3.1
 [0.2.3]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.2.3
 [0.2.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.2...v0.2.3
 [0.2.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.1...v0.2.2

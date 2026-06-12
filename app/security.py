@@ -84,23 +84,22 @@ def _client_ip_from_forwarded_for(
     networks: tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...],
 ) -> str | None:
     """Parse X-Forwarded-For right-to-left, skipping trusted proxy hops."""
+    tokens = [part.strip() for part in forwarded.split(",") if part.strip()]
+    if not tokens:
+        return None
+
     parsed_ips: list[str] = []
-    for part in forwarded.split(","):
-        token = part.strip()
-        if not token:
-            continue
+    for token in tokens:
         parsed = _parse_ip(token)
         if parsed is None:
-            continue
+            return None
         parsed_ips.append(parsed)
 
     for parsed in reversed(parsed_ips):
         if not _ip_in_trusted_networks(parsed, networks):
             return parsed
 
-    if parsed_ips:
-        return parsed_ips[0]
-    return None
+    return parsed_ips[0]
 
 
 def get_client_ip(request: Request, settings: Settings) -> str:
