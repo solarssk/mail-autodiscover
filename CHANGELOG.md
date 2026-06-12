@@ -6,6 +6,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-06-12
+
+### What's new
+
+- Security hardening for reverse-proxy client IP handling and stricter production validation of `TRUSTED_PROXY_IPS`.
+
+### Fixed
+
+- Prefer `X-Real-IP` over `X-Forwarded-For` when the direct peer is a trusted proxy, preventing spoofed leftmost XFF entries from bypassing rate limits or polluting logs.
+- Parse `X-Forwarded-For` from right to left, skipping trusted proxy hops, when `X-Real-IP` is missing or invalid.
+
+### Changed
+
+- In production, every non-empty `TRUSTED_PROXY_IPS` entry must be a valid IP or CIDR; invalid tokens now fail startup instead of being silently ignored.
+- Nginx reverse-proxy docs now recommend `X-Forwarded-For $remote_addr` instead of `$proxy_add_x_forwarded_for` for single-hop deployments.
+
 ## [0.3.0] - 2026-06-12
 
 ### What's new
@@ -230,7 +246,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.3.1
+[0.3.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.0...v0.3.1
 [0.2.3]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.2.3
 [0.2.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.2...v0.2.3
 [0.2.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.1...v0.2.2

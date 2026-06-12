@@ -67,7 +67,7 @@ def _parse_ip(value: str) -> str | None:
 
 
 def _should_trust_forwarded_headers(request: Request, settings: Settings) -> bool:
-    """Decide if X-Forwarded-For may be used based on proxy trust settings."""
+    """Decide if forwarded client IP headers may be used based on proxy trust settings."""
     if not settings.trust_proxy_headers:
         return False
     networks = settings.trusted_proxy_networks
@@ -79,18 +79,42 @@ def _should_trust_forwarded_headers(request: Request, settings: Settings) -> boo
     return _ip_in_trusted_networks(peer, networks)
 
 
+def _client_ip_from_forwarded_for(
+    forwarded: str,
+    networks: tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...],
+) -> str | None:
+    """Parse X-Forwarded-For right-to-left, skipping trusted proxy hops."""
+    tokens = [part.strip() for part in forwarded.split(",") if part.strip()]
+    if not tokens:
+        return None
+
+    parsed_ips: list[str] = []
+    for token in tokens:
+        parsed = _parse_ip(token)
+        if parsed is None:
+            return None
+        parsed_ips.append(parsed)
+
+    for parsed in reversed(parsed_ips):
+        if not _ip_in_trusted_networks(parsed, networks):
+            return parsed
+
+    return parsed_ips[0]
+
+
 def get_client_ip(request: Request, settings: Settings) -> str:
     """Resolve client IP, honoring forwarded headers only from trusted proxies."""
     peer = _peer_ip(request)
     if _should_trust_forwarded_headers(request, settings):
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            parsed = _parse_ip(forwarded.split(",")[0])
-            if parsed is not None:
-                return parsed
+        networks = settings.trusted_proxy_networks
         real_ip = request.headers.get("X-Real-IP")
         if real_ip:
             parsed = _parse_ip(real_ip)
+            if parsed is not None and not _ip_in_trusted_networks(parsed, networks):
+                return parsed
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            parsed = _client_ip_from_forwarded_for(forwarded, networks)
             if parsed is not None:
                 return parsed
     if peer:

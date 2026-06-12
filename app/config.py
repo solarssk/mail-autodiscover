@@ -188,6 +188,19 @@ class Settings(BaseSettings):
         paths = {p.strip() for p in self.access_log_skip_paths.split(",") if p.strip()}
         return frozenset(paths)
 
+    @staticmethod
+    def _parse_trusted_proxy_token(
+        token: str,
+    ) -> ipaddress.IPv4Network | ipaddress.IPv6Network | None:
+        """Return a parsed network for a TRUSTED_PROXY_IPS token, or None when invalid."""
+        try:
+            if "/" in token:
+                return ipaddress.ip_network(token, strict=False)
+            prefix = "128" if ":" in token else "32"
+            return ipaddress.ip_network(f"{token}/{prefix}", strict=False)
+        except ValueError:
+            return None
+
     @property
     def trusted_proxy_networks(
         self,
@@ -198,14 +211,9 @@ class Settings(BaseSettings):
             token = part.strip()
             if not token:
                 continue
-            try:
-                if "/" in token:
-                    entries.append(ipaddress.ip_network(token, strict=False))
-                else:
-                    prefix = "128" if ":" in token else "32"
-                    entries.append(ipaddress.ip_network(f"{token}/{prefix}", strict=False))
-            except ValueError:
-                continue
+            network = self._parse_trusted_proxy_token(token)
+            if network is not None:
+                entries.append(network)
         return tuple(entries)
 
     @field_validator("imap_socket_type", "smtp_socket_type", "pop3_socket_type", mode="before")
@@ -270,6 +278,14 @@ class Settings(BaseSettings):
         errors: list[str] = []
 
         if self.app_env.lower() == "production":
+            if self.trust_proxy_headers and self.trusted_proxy_ips.strip():
+                for part in self.trusted_proxy_ips.split(","):
+                    token = part.strip()
+                    if not token:
+                        continue
+                    if self._parse_trusted_proxy_token(token) is None:
+                        errors.append(f"TRUSTED_PROXY_IPS contains invalid entry: {token}")
+
             if self.trust_proxy_headers:
                 if not self.trusted_proxy_ips.strip():
                     errors.append(
