@@ -47,6 +47,21 @@ def test_trusted_peer_uses_x_real_ip() -> None:
     assert get_client_ip(request, settings) == "198.51.100.7"  # type: ignore[arg-type]
 
 
+def test_trusted_x_real_ip_falls_through_to_xff() -> None:
+    settings = make_settings(
+        trust_proxy_headers=True,
+        trusted_proxy_ips="172.16.2.1,203.0.113.0/24",
+    )
+    request = _fake_request(
+        peer_host="172.16.2.1",
+        headers={
+            "X-Real-IP": "203.0.113.1",
+            "X-Forwarded-For": "198.51.100.7, 203.0.113.1",
+        },
+    )
+    assert get_client_ip(request, settings) == "198.51.100.7"  # type: ignore[arg-type]
+
+
 def test_spoofed_xff_does_not_override_x_real_ip() -> None:
     settings = make_settings(
         trust_proxy_headers=True,

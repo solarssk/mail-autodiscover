@@ -278,7 +278,7 @@ class Settings(BaseSettings):
         errors: list[str] = []
 
         if self.app_env.lower() == "production":
-            if self.trusted_proxy_ips.strip():
+            if self.trust_proxy_headers and self.trusted_proxy_ips.strip():
                 for part in self.trusted_proxy_ips.split(","):
                     token = part.strip()
                     if not token:

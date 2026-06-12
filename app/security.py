@@ -111,7 +111,7 @@ def get_client_ip(request: Request, settings: Settings) -> str:
         real_ip = request.headers.get("X-Real-IP")
         if real_ip:
             parsed = _parse_ip(real_ip)
-            if parsed is not None:
+            if parsed is not None and not _ip_in_trusted_networks(parsed, networks):
                 return parsed
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:

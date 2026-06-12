@@ -68,12 +68,20 @@ def test_production_rejects_partially_invalid_trusted_proxy_ips() -> None:
         )
 
 
-def test_production_rejects_invalid_trusted_proxy_ips_without_proxy_trust() -> None:
-    with pytest.raises(ValidationError, match="invalid entry: not-a-cidr"):
-        _production_settings(
-            trust_proxy_headers=False,
-            trusted_proxy_ips="172.18.0.0/16,not-a-cidr",
-        )
+def test_production_accepts_uvicorn_forwarded_allow_ips_when_proxy_trust_disabled() -> None:
+    settings = _production_settings(
+        trust_proxy_headers=False,
+        trusted_proxy_ips="*",
+    )
+    assert settings.trusted_proxy_ips == "*"
+
+
+def test_production_ignores_invalid_trusted_proxy_ips_when_proxy_trust_disabled() -> None:
+    settings = _production_settings(
+        trust_proxy_headers=False,
+        trusted_proxy_ips="172.18.0.0/16,not-a-cidr",
+    )
+    assert settings.trusted_proxy_ips == "172.18.0.0/16,not-a-cidr"
 
 
 def test_production_rejects_non_positive_rate_limit() -> None:
