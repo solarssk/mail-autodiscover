@@ -61,18 +61,18 @@ def test_production_rejects_invalid_trusted_proxy_ips() -> None:
 
 
 def test_production_rejects_partially_invalid_trusted_proxy_ips() -> None:
-    with pytest.raises(ValidationError, match="invalid entry: dupa"):
+    with pytest.raises(ValidationError, match="invalid entry: not-a-cidr"):
         _production_settings(
             trust_proxy_headers=True,
-            trusted_proxy_ips="172.18.0.0/16,dupa",
+            trusted_proxy_ips="172.18.0.0/16,not-a-cidr",
         )
 
 
 def test_production_rejects_invalid_trusted_proxy_ips_without_proxy_trust() -> None:
-    with pytest.raises(ValidationError, match="invalid entry: dupa"):
+    with pytest.raises(ValidationError, match="invalid entry: not-a-cidr"):
         _production_settings(
             trust_proxy_headers=False,
-            trusted_proxy_ips="172.18.0.0/16,dupa",
+            trusted_proxy_ips="172.18.0.0/16,not-a-cidr",
         )
 
 
