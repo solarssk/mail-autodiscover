@@ -23,7 +23,8 @@ Most common causes:
 
 - keep `TRUST_PROXY_HEADERS=false` unless traffic really comes from your proxy
 - add the proxy IP or container CIDR to `TRUSTED_PROXY_IPS`
-- verify the proxy forwards `X-Forwarded-For` or `X-Real-IP`
+- verify the proxy forwards `X-Real-IP` and `X-Forwarded-For`; the app prefers `X-Real-IP` and parses `X-Forwarded-For` from right to left
+- for a single nginx hop, set both headers to `$remote_addr` (see [nginx.md](reverse-proxy/nginx.md))
 
 ## Apple Mail Warns About Unsigned Profile
 

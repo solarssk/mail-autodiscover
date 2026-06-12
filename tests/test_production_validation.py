@@ -60,6 +60,22 @@ def test_production_rejects_invalid_trusted_proxy_ips() -> None:
         )
 
 
+def test_production_rejects_partially_invalid_trusted_proxy_ips() -> None:
+    with pytest.raises(ValidationError, match="invalid entry: dupa"):
+        _production_settings(
+            trust_proxy_headers=True,
+            trusted_proxy_ips="172.18.0.0/16,dupa",
+        )
+
+
+def test_production_rejects_invalid_trusted_proxy_ips_without_proxy_trust() -> None:
+    with pytest.raises(ValidationError, match="invalid entry: dupa"):
+        _production_settings(
+            trust_proxy_headers=False,
+            trusted_proxy_ips="172.18.0.0/16,dupa",
+        )
+
+
 def test_production_rejects_non_positive_rate_limit() -> None:
     with pytest.raises(ValidationError, match="RATE_LIMIT_PER_MINUTE"):
         _production_settings(rate_limit_enabled=True, rate_limit_per_minute=0)

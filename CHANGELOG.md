@@ -6,6 +6,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-06-12
+
+### What's new
+
+- Security hardening for reverse-proxy client IP handling and stricter production validation of `TRUSTED_PROXY_IPS`.
+
+### Fixed
+
+- Prefer `X-Real-IP` over `X-Forwarded-For` when the direct peer is a trusted proxy, preventing spoofed leftmost XFF entries from bypassing rate limits or polluting logs.
+- Parse `X-Forwarded-For` from right to left, skipping trusted proxy hops, when `X-Real-IP` is missing or invalid.
+
+### Changed
+
+- In production, every non-empty `TRUSTED_PROXY_IPS` entry must be a valid IP or CIDR; invalid tokens now fail startup instead of being silently ignored.
+- Nginx reverse-proxy docs now recommend `X-Forwarded-For $remote_addr` instead of `$proxy_add_x_forwarded_for` for single-hop deployments.
+
 ## [0.3.0] - 2026-06-12
 
 ### What's new

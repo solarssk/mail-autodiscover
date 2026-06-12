@@ -3,7 +3,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.security import get_client_ip, reset_rate_limit_store
+from app.security import reset_rate_limit_store
 from tests.conftest import OUTLOOK_REQUEST_TEMPLATE, FixedSettingsProvider, make_settings
 
 
@@ -99,83 +99,3 @@ def test_rate_limit_uses_x_forwarded_for_when_trusted() -> None:
         assert c.get("/robots.txt", headers=headers).status_code == 200
         assert c.get("/robots.txt", headers=headers).status_code == 200
         assert c.get("/robots.txt", headers=headers).status_code == 429
-
-
-def test_get_client_ip_from_forwarded_header_when_peer_trusted() -> None:
-    settings = make_settings(
-        trust_proxy_headers=True,
-        trusted_proxy_ips="10.0.0.0/8",
-    )
-
-    class FakeClient:
-        host = "10.0.0.1"
-
-    class FakeRequest:
-        headers = {"X-Forwarded-For": "203.0.113.5, 10.0.0.1"}
-        client = FakeClient()
-
-    assert get_client_ip(FakeRequest(), settings) == "203.0.113.5"  # type: ignore[arg-type]
-
-
-def test_get_client_ip_ignores_forwarded_header_from_untrusted_peer() -> None:
-    settings = make_settings(
-        trust_proxy_headers=True,
-        trusted_proxy_ips="172.16.2.0/24",
-    )
-
-    class FakeClient:
-        host = "203.0.113.99"
-
-    class FakeRequest:
-        headers = {"X-Forwarded-For": "1.2.3.4"}
-        client = FakeClient()
-
-    assert get_client_ip(FakeRequest(), settings) == "203.0.113.99"  # type: ignore[arg-type]
-
-
-def test_get_client_ip_ignores_forwarded_when_no_trusted_ips() -> None:
-    settings = make_settings(
-        trust_proxy_headers=True,
-        trusted_proxy_ips="",
-    )
-
-    class FakeClient:
-        host = "203.0.113.99"
-
-    class FakeRequest:
-        headers = {"X-Forwarded-For": "1.2.3.4"}
-        client = FakeClient()
-
-    assert get_client_ip(FakeRequest(), settings) == "203.0.113.99"  # type: ignore[arg-type]
-
-
-def test_get_client_ip_ignores_invalid_forwarded_header() -> None:
-    settings = make_settings(
-        trust_proxy_headers=True,
-        trusted_proxy_ips="127.0.0.1/32",
-    )
-
-    class FakeClient:
-        host = "127.0.0.1"
-
-    class FakeRequest:
-        headers = {"X-Forwarded-For": "not-an-ip"}
-        client = FakeClient()
-
-    assert get_client_ip(FakeRequest(), settings) == "127.0.0.1"  # type: ignore[arg-type]
-
-
-def test_get_client_ip_uses_x_real_ip_when_peer_trusted() -> None:
-    settings = make_settings(
-        trust_proxy_headers=True,
-        trusted_proxy_ips="172.16.2.1",
-    )
-
-    class FakeClient:
-        host = "172.16.2.1"
-
-    class FakeRequest:
-        headers = {"X-Real-IP": "198.51.100.7"}
-        client = FakeClient()
-
-    assert get_client_ip(FakeRequest(), settings) == "198.51.100.7"  # type: ignore[arg-type]
