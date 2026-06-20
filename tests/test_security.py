@@ -7,7 +7,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.security import _rate_limit_store, is_rate_limited, reset_rate_limit_store
+from app.security import (
+    _rate_limit_store,
+    _sanitize_for_log,
+    _sanitize_request_id,
+    is_rate_limited,
+    reset_rate_limit_store,
+)
 from tests.conftest import FixedSettingsProvider, make_settings
 
 
@@ -47,21 +53,60 @@ def test_hsts_not_set_when_http_base_url() -> None:
     assert "Strict-Transport-Security" not in response.headers
 
 
-def test_request_id_control_chars_stripped() -> None:
-    """X-Request-ID with embedded newlines must not be forwarded with control chars intact."""
+def test_sanitize_for_log_replaces_control_chars() -> None:
+    assert _sanitize_for_log("/probe\nendpoint=/admin") == "/probe?endpoint=/admin"
+    assert _sanitize_for_log("no-controls") == "no-controls"
+
+
+def test_sanitize_request_id_strips_control_chars() -> None:
+    assert _sanitize_request_id("legit\nevil") == "legitevil"
+    fallback = _sanitize_request_id("\n\r")
+    assert "\n" not in fallback
+    assert "\r" not in fallback
+    assert len(fallback) == 8
+
+
+def test_request_id_control_chars_stripped(caplog: pytest.LogCaptureFixture) -> None:
+    """X-Request-ID with embedded newlines must not reach logs or response headers intact."""
     reset_rate_limit_store()
     settings = make_settings(disable_access_log=False, log_level="INFO")
     app = create_app(FixedSettingsProvider(settings))
     injected = "legit\nevil=injected endpoint=/admin status=200"
-    with TestClient(app, headers={"X-Request-ID": injected}) as c:
+    with caplog.at_level(logging.INFO, logger="mail_autodiscover.access"), TestClient(
+        app, headers={"X-Request-ID": injected}
+    ) as c:
         response = c.get("/mail/config-v1.1.xml", params={"emailaddress": "user@example.com"})
+
     returned_id = response.headers.get("X-Request-ID", "")
-    # Control characters must be stripped — the critical injection vectors
     assert "\n" not in returned_id
     assert "\r" not in returned_id
     assert "\x00" not in returned_id
-    # The newline that would split log records is gone
-    assert "legit\n" not in returned_id
+
+    assert len(caplog.records) == 1
+    for record in caplog.records:
+        assert "\n" not in record.message
+        assert "\r" not in record.message
+    log_text = caplog.records[0].message
+    assert f"request_id={returned_id}" in log_text
+
+
+def test_path_control_chars_sanitized_in_logs(caplog: pytest.LogCaptureFixture) -> None:
+    """Encoded newlines in URL paths must not forge extra log lines."""
+    reset_rate_limit_store()
+    settings = make_settings(disable_access_log=False, log_level="INFO")
+    app = create_app(FixedSettingsProvider(settings))
+
+    with caplog.at_level(logging.INFO, logger="mail_autodiscover.access"), TestClient(app) as c:
+        c.get("/probe%0aendpoint=/admin%20status=200")
+
+    assert len(caplog.records) == 1
+    log_text = caplog.records[0].message
+    for record in caplog.records:
+        assert "\n" not in record.message
+        assert "\r" not in record.message
+    # Forged status=200 stays inside endpoint=; real HTTP status is logged last.
+    assert "endpoint=" in log_text
+    assert log_text.endswith("status=404 domain_allowed=None")
 
 
 def test_rate_limit_when_enabled() -> None:
