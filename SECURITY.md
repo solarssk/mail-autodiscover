@@ -65,9 +65,10 @@ There is no admin API in the current version. Configuration comes from environme
 
 - Safe XML parsing with `defusedxml`
 - Request body size limit
-- XML output escaping
+- XML output escaping via `html.escape`
+- Log-injection prevention: `X-Request-ID` and URL paths are stripped of ASCII control characters before any log write
 - Rate limiting per IP with `RATE_LIMIT_PER_MINUTE` and bounded in-memory storage
-- Security headers such as `nosniff`, `no-referrer`, `DENY`, and `no-store`
+- Security headers: `nosniff`, `no-referrer`, `X-Frame-Options: DENY`, `Cache-Control: no-store`, `Content-Security-Policy`, `Permissions-Policy`, and `Strict-Transport-Security` (when `PUBLIC_BASE_URL` uses `https://`)
 - Neutral error responses that do not expose your domain list
 - Non-root container user
 - CI security checks with `gitleaks`, `bandit`, `pip-audit`, Trivy, and CodeQL
@@ -81,6 +82,7 @@ There is no admin API in the current version. Configuration comes from environme
 5. Do not expose the container directly to the public internet without TLS.
 6. In production, pin GHCR images by semver tag or digest instead of using `latest`.
 7. With `APP_ENV=production`, the service refuses to start on placeholder values (`example.com`, `mail.example.com`, `http://localhost`, missing `TRUSTED_PROXY_IPS` when proxy trust is on).
+8. **Do not run multiple uvicorn workers** (`--workers N` or Gunicorn multi-process) without an external rate-limiter. The built-in rate limiter is in-process only; with N workers the effective per-IP limit becomes `N × RATE_LIMIT_PER_MINUTE`.
 
 ## Reverse proxy logging
 

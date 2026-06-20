@@ -6,6 +6,7 @@ import hashlib
 import ipaddress
 import json
 import logging
+import re
 import time
 import uuid
 from collections import defaultdict
@@ -23,6 +24,22 @@ logger = logging.getLogger("mail_autodiscover.access")
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
 _rate_limit_lock = Lock()
 _last_rate_limit_cleanup = 0.0
+
+_LOG_CONTROL_RE = re.compile(r"[\x00-\x1F\x7F]")
+
+
+def _sanitize_for_log(value: str) -> str:
+    """Replace ASCII control characters with '?' to prevent log-injection via newlines."""
+    return _LOG_CONTROL_RE.sub("?", value)
+
+
+def _sanitize_request_id(raw: str | None) -> str:
+    """Return a sanitised request ID; strip control chars or generate a fresh one."""
+    if raw:
+        sanitized = _LOG_CONTROL_RE.sub("", raw)[:64].strip()
+        if sanitized:
+            return sanitized
+    return str(uuid.uuid4())[:8]
 
 
 def _log_event(
@@ -198,19 +215,34 @@ def reset_rate_limit_store() -> None:
 class SecurityMiddleware(BaseHTTPMiddleware):
     """Apply rate limits, security headers, and privacy-safe access logging."""
 
+    _CSP = (
+        "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; "
+        "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    )
+    _PERMISSIONS_POLICY = (
+        "accelerometer=(), camera=(), geolocation=(), "
+        "gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+    )
+
     def __init__(self, app: object, settings: Settings) -> None:
         super().__init__(app)  # type: ignore[arg-type]
         self.settings = settings
+        self._hsts_value = (
+            "max-age=63072000; includeSubDomains"
+            if settings.public_base_url.lower().startswith("https://")
+            else None
+        )
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Enforce limits, attach headers, and log requests without full email addresses."""
-        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4())[:8])
+        request_id = _sanitize_request_id(request.headers.get("X-Request-ID"))
         request.state.request_id = request_id
         request.state.domain_allowed = None
 
         path = request.url.path
+        log_endpoint = _sanitize_for_log(path)
         client_ip = get_client_ip(request, self.settings)
         if not should_skip_rate_limit(path) and is_rate_limited(client_ip, self.settings):
             _log_event(
@@ -219,7 +251,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 logger_name=logger,
                 event="request",
                 request_id=request_id,
-                endpoint=request.url.path,
+                endpoint=log_endpoint,
                 status=429,
                 rate_limited=True,
             )
@@ -236,6 +268,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             response.headers["Referrer-Policy"] = "no-referrer"
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["Cache-Control"] = "no-store"
+            response.headers["Content-Security-Policy"] = self._CSP
+            response.headers["Permissions-Policy"] = self._PERMISSIONS_POLICY
+            if self._hsts_value:
+                response.headers["Strict-Transport-Security"] = self._hsts_value
 
         response.headers["X-Request-ID"] = request_id
 
@@ -258,7 +294,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                         request_id=request_id,
                         client_ip=client_ip,
                         method=request.method,
-                        endpoint=path,
+                        endpoint=log_endpoint,
                         status=response.status_code,
                         domain_allowed=domain_allowed,
                         domain_hash=domain_hash,
@@ -270,7 +306,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                         request_id,
                         client_ip,
                         request.method,
-                        path,
+                        log_endpoint,
                         response.status_code,
                         domain_info,
                     )
@@ -283,7 +319,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                     request_id=request_id,
                     client_ip=client_ip,
                     method=request.method,
-                    endpoint=path,
+                    endpoint=log_endpoint,
                     status=response.status_code,
                     domain_allowed=domain_allowed,
                 )

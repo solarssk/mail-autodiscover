@@ -25,6 +25,43 @@ def test_security_headers_present(client: TestClient) -> None:
     assert response.headers.get("Referrer-Policy") == "no-referrer"
     assert response.headers.get("X-Frame-Options") == "DENY"
     assert response.headers.get("Cache-Control") == "no-store"
+    assert response.headers.get("Content-Security-Policy") is not None
+    assert response.headers.get("Permissions-Policy") is not None
+
+
+def test_hsts_set_when_https_base_url() -> None:
+    settings = make_settings(public_base_url="https://autodiscover.example.com")
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as c:
+        response = c.get("/health")
+    assert "Strict-Transport-Security" in response.headers
+    assert "max-age=63072000" in response.headers["Strict-Transport-Security"]
+    assert "includeSubDomains" in response.headers["Strict-Transport-Security"]
+
+
+def test_hsts_not_set_when_http_base_url() -> None:
+    settings = make_settings(public_base_url="http://localhost:8000")
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as c:
+        response = c.get("/health")
+    assert "Strict-Transport-Security" not in response.headers
+
+
+def test_request_id_control_chars_stripped() -> None:
+    """X-Request-ID with embedded newlines must not be forwarded with control chars intact."""
+    reset_rate_limit_store()
+    settings = make_settings(disable_access_log=False, log_level="INFO")
+    app = create_app(FixedSettingsProvider(settings))
+    injected = "legit\nevil=injected endpoint=/admin status=200"
+    with TestClient(app, headers={"X-Request-ID": injected}) as c:
+        response = c.get("/mail/config-v1.1.xml", params={"emailaddress": "user@example.com"})
+    returned_id = response.headers.get("X-Request-ID", "")
+    # Control characters must be stripped — the critical injection vectors
+    assert "\n" not in returned_id
+    assert "\r" not in returned_id
+    assert "\x00" not in returned_id
+    # The newline that would split log records is gone
+    assert "legit\n" not in returned_id
 
 
 def test_rate_limit_when_enabled() -> None:
