@@ -234,6 +234,19 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             else None
         )
 
+    def _apply_security_headers(self, response: Response) -> None:
+        """Attach configured security headers to every response path."""
+        if not self.settings.security_headers_enabled:
+            return
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Content-Security-Policy"] = self._CSP
+        response.headers["Permissions-Policy"] = self._PERMISSIONS_POLICY
+        if self._hsts_value:
+            response.headers["Strict-Transport-Security"] = self._hsts_value
+
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
@@ -256,24 +269,17 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 status=429,
                 rate_limited=True,
             )
-            return JSONResponse(
+            rate_limited_response = JSONResponse(
                 status_code=429,
                 content={"detail": "Too many requests"},
                 headers={"X-Request-ID": request_id},
             )
+            self._apply_security_headers(rate_limited_response)
+            return rate_limited_response
 
         response = await call_next(request)
 
-        if self.settings.security_headers_enabled:
-            response.headers["X-Content-Type-Options"] = "nosniff"
-            response.headers["Referrer-Policy"] = "no-referrer"
-            response.headers["X-Frame-Options"] = "DENY"
-            response.headers["Cache-Control"] = "no-store"
-            response.headers["Content-Security-Policy"] = self._CSP
-            response.headers["Permissions-Policy"] = self._PERMISSIONS_POLICY
-            if self._hsts_value:
-                response.headers["Strict-Transport-Security"] = self._hsts_value
-
+        self._apply_security_headers(response)
         response.headers["X-Request-ID"] = request_id
 
         if not self.settings.disable_access_log and not should_skip_access_log(

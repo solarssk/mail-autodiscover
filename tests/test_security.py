@@ -59,6 +59,34 @@ def test_hsts_not_set_when_http_base_url() -> None:
     assert "Strict-Transport-Security" not in response.headers
 
 
+def test_rate_limit_response_includes_security_headers() -> None:
+    reset_rate_limit_store()
+    settings = make_settings(
+        public_base_url="https://autodiscover.example.com",
+        rate_limit_enabled=True,
+        rate_limit_per_minute=1,
+    )
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as c:
+        assert c.get("/robots.txt").status_code == 200
+        response = c.get("/robots.txt")
+
+    assert response.status_code == 429
+    assert response.headers.get("X-Content-Type-Options") == "nosniff"
+    assert response.headers.get("Referrer-Policy") == "no-referrer"
+    assert response.headers.get("X-Frame-Options") == "DENY"
+    assert response.headers.get("Cache-Control") == "no-store"
+    assert response.headers.get("Content-Security-Policy") == (
+        "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; "
+        "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    )
+    assert response.headers.get("Permissions-Policy") == (
+        "accelerometer=(), camera=(), geolocation=(), "
+        "gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+    )
+    assert "Strict-Transport-Security" in response.headers
+
+
 def test_sanitize_for_log_replaces_unsafe_chars() -> None:
     assert _sanitize_for_log("/probe\nendpoint=/admin") == "/probe?endpoint?/admin"
     assert _sanitize_for_log("/probe status=200") == "/probe?status?200"
