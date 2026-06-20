@@ -96,7 +96,7 @@ Prebuilt images are published to GHCR:
 
 ```text
 ghcr.io/solarssk/mail-autodiscover:latest
-ghcr.io/solarssk/mail-autodiscover:0.3.0
+ghcr.io/solarssk/mail-autodiscover:0.3.2
 ```
 
 Prefer pinned tags or digests in production.
