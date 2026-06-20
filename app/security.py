@@ -229,7 +229,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         super().__init__(app)  # type: ignore[arg-type]
         self.settings = settings
         self._hsts_value = (
-            "max-age=63072000; includeSubDomains"
+            "max-age=63072000"
             if settings.public_base_url.lower().startswith("https://")
             else None
         )

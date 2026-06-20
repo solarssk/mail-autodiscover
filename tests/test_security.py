@@ -47,8 +47,7 @@ def test_hsts_set_when_https_base_url() -> None:
     with TestClient(app) as c:
         response = c.get("/health")
     assert "Strict-Transport-Security" in response.headers
-    assert "max-age=63072000" in response.headers["Strict-Transport-Security"]
-    assert "includeSubDomains" in response.headers["Strict-Transport-Security"]
+    assert response.headers["Strict-Transport-Security"] == "max-age=63072000"
 
 
 def test_hsts_not_set_when_http_base_url() -> None:
