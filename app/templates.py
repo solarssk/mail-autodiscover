@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xml.sax.saxutils import escape
+from html import escape
 
 from app.config import DomainMailSettings, Settings, SocketType, UsernameFormat
 from app.email_utils import ValidatedEmail, build_username
@@ -10,7 +10,7 @@ from app.email_utils import ValidatedEmail, build_username
 
 def _esc(value: str | int) -> str:
     """XML-escape a value for safe inclusion in response bodies."""
-    return escape(str(value))
+    return escape(str(value), quote=False)
 
 
 def _outlook_ssl_on(socket_type: SocketType) -> str:
