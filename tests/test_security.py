@@ -7,7 +7,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.security import _rate_limit_store, is_rate_limited, reset_rate_limit_store
+from app.security import (
+    _rate_limit_store,
+    _sanitize_for_log,
+    _sanitize_request_id,
+    is_rate_limited,
+    reset_rate_limit_store,
+)
 from tests.conftest import FixedSettingsProvider, make_settings
 
 
@@ -25,6 +31,124 @@ def test_security_headers_present(client: TestClient) -> None:
     assert response.headers.get("Referrer-Policy") == "no-referrer"
     assert response.headers.get("X-Frame-Options") == "DENY"
     assert response.headers.get("Cache-Control") == "no-store"
+    assert response.headers.get("Content-Security-Policy") == (
+        "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; "
+        "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    )
+    assert response.headers.get("Permissions-Policy") == (
+        "accelerometer=(), camera=(), geolocation=(), "
+        "gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+    )
+
+
+def test_hsts_set_when_https_base_url() -> None:
+    settings = make_settings(public_base_url="https://autodiscover.example.com")
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as c:
+        response = c.get("/health")
+    assert "Strict-Transport-Security" in response.headers
+    assert response.headers["Strict-Transport-Security"] == "max-age=63072000"
+
+
+def test_hsts_not_set_when_http_base_url() -> None:
+    settings = make_settings(public_base_url="http://localhost:8000")
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as c:
+        response = c.get("/health")
+    assert "Strict-Transport-Security" not in response.headers
+
+
+def test_rate_limit_response_includes_security_headers() -> None:
+    reset_rate_limit_store()
+    settings = make_settings(
+        public_base_url="https://autodiscover.example.com",
+        rate_limit_enabled=True,
+        rate_limit_per_minute=1,
+    )
+    app = create_app(FixedSettingsProvider(settings))
+    with TestClient(app) as c:
+        assert c.get("/robots.txt").status_code == 200
+        response = c.get("/robots.txt")
+
+    assert response.status_code == 429
+    assert response.headers.get("X-Content-Type-Options") == "nosniff"
+    assert response.headers.get("Referrer-Policy") == "no-referrer"
+    assert response.headers.get("X-Frame-Options") == "DENY"
+    assert response.headers.get("Cache-Control") == "no-store"
+    assert response.headers.get("Content-Security-Policy") == (
+        "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; "
+        "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    )
+    assert response.headers.get("Permissions-Policy") == (
+        "accelerometer=(), camera=(), geolocation=(), "
+        "gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+    )
+    assert "Strict-Transport-Security" in response.headers
+
+
+def test_sanitize_for_log_replaces_unsafe_chars() -> None:
+    assert _sanitize_for_log("/probe\nendpoint=/admin") == "/probe?endpoint?/admin"
+    assert _sanitize_for_log("/probe status=200") == "/probe?status?200"
+    assert _sanitize_for_log("no-controls") == "no-controls"
+
+
+def test_sanitize_request_id_strips_unsafe_chars() -> None:
+    assert _sanitize_request_id("legit\nevil") == "legitevil"
+    assert _sanitize_request_id("abc=def ghi") == "abcdefghi"
+    fallback = _sanitize_request_id("\n\r=")
+    assert "\n" not in fallback
+    assert "\r" not in fallback
+    assert "=" not in fallback
+    assert len(fallback) == 8
+
+
+def test_request_id_control_chars_stripped(caplog: pytest.LogCaptureFixture) -> None:
+    """X-Request-ID with embedded newlines must not reach logs or response headers intact."""
+    reset_rate_limit_store()
+    settings = make_settings(disable_access_log=False, log_level="INFO")
+    app = create_app(FixedSettingsProvider(settings))
+    injected = "legit\nevil=injected endpoint=/admin status=200"
+    expected_id = _sanitize_request_id(injected)
+    with caplog.at_level(logging.INFO, logger="mail_autodiscover.access"), TestClient(
+        app, headers={"X-Request-ID": injected}
+    ) as c:
+        response = c.get("/mail/config-v1.1.xml", params={"emailaddress": "user@example.com"})
+
+    returned_id = response.headers.get("X-Request-ID", "")
+    assert returned_id == expected_id
+    assert "\n" not in returned_id
+    assert "\r" not in returned_id
+    assert "\x00" not in returned_id
+    assert "=" not in returned_id
+    assert " " not in returned_id
+
+    assert len(caplog.records) == 1
+    log_text = caplog.records[0].message
+    for record in caplog.records:
+        assert "\n" not in record.message
+        assert "\r" not in record.message
+    assert log_text.startswith(f"request_id={expected_id} ")
+    assert log_text.count("status=") == 1
+
+
+def test_path_control_chars_sanitized_in_logs(caplog: pytest.LogCaptureFixture) -> None:
+    """Encoded newlines in URL paths must not forge extra log lines."""
+    reset_rate_limit_store()
+    settings = make_settings(disable_access_log=False, log_level="INFO")
+    app = create_app(FixedSettingsProvider(settings))
+
+    with caplog.at_level(logging.INFO, logger="mail_autodiscover.access"), TestClient(app) as c:
+        c.get("/probe%0aendpoint=/admin%20status=200")
+
+    assert len(caplog.records) == 1
+    log_text = caplog.records[0].message
+    for record in caplog.records:
+        assert "\n" not in record.message
+        assert "\r" not in record.message
+    # Forged status=200 must not appear as a separate key=value token.
+    assert "endpoint=" in log_text
+    assert log_text.endswith("status=404 domain_allowed=None")
+    assert log_text.count("status=") == 1
 
 
 def test_rate_limit_when_enabled() -> None:
