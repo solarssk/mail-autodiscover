@@ -1,6 +1,6 @@
 # Pin to bookworm for predictable Debian security updates.
 # Dependabot proposes digest bumps via .github/dependabot.yml (docker ecosystem).
-FROM python:3.12-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 WORKDIR /app
 
