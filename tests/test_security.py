@@ -8,7 +8,6 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.security import (
-    SecurityMiddleware,
     _rate_limit_store,
     _sanitize_for_log,
     _sanitize_request_id,
@@ -32,8 +31,14 @@ def test_security_headers_present(client: TestClient) -> None:
     assert response.headers.get("Referrer-Policy") == "no-referrer"
     assert response.headers.get("X-Frame-Options") == "DENY"
     assert response.headers.get("Cache-Control") == "no-store"
-    assert response.headers.get("Content-Security-Policy") == SecurityMiddleware._CSP
-    assert response.headers.get("Permissions-Policy") == SecurityMiddleware._PERMISSIONS_POLICY
+    assert response.headers.get("Content-Security-Policy") == (
+        "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; "
+        "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    )
+    assert response.headers.get("Permissions-Policy") == (
+        "accelerometer=(), camera=(), geolocation=(), "
+        "gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+    )
 
 
 def test_hsts_set_when_https_base_url() -> None:
