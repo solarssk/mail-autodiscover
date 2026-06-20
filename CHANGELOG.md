@@ -6,6 +6,44 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-06-20
+
+### What's new
+
+- Security hardening for the public autodiscover endpoints and their access logs.
+- Maintenance updates for the Docker base image and GitHub secret-scanning action.
+
+### What this means
+
+- Plain text access logs are harder to spoof. Request-controlled values such as `X-Request-ID` and URL paths can no longer inject extra log lines or fake `key=value` fields like `status=200`.
+- HTTPS deployments now send stricter browser security headers on normal responses and rate-limited `429` responses.
+- The GHCR Docker image now builds on the Python 3.14 slim Bookworm base image.
+- CI secret scanning now uses `gitleaks/gitleaks-action` v3, which moves the action runtime to Node 24.
+
+### Action required
+
+- No configuration changes are required for existing deployments.
+- If you run multiple uvicorn/Gunicorn workers, keep an external rate limiter in front of the service. The built-in limiter is intentionally in-process and each worker has its own counter.
+
+### Security
+
+- Sanitized `X-Request-ID` before storing it on request state, returning it to clients, or writing it to logs. Only token-safe characters are kept.
+- Sanitized logged URL paths so control characters, whitespace, and `=` cannot create forged fields in text-mode access logs.
+- Added `Strict-Transport-Security: max-age=63072000` when `PUBLIC_BASE_URL` uses HTTPS. The header intentionally does not include `includeSubDomains` by default, because this app cannot know whether sibling subdomains are HTTPS-ready.
+- Added `Content-Security-Policy` and `Permissions-Policy` headers.
+- Applied security headers to rate-limited `429` responses as well as normal responses.
+- Replaced `xml.sax.saxutils.escape` with `html.escape(..., quote=False)` for XML response text escaping, removing the Bandit B406 warning without changing output behavior.
+
+### Changed
+
+- Updated `Dockerfile` from `python:3.12-slim-bookworm` to `python:3.14-slim-bookworm`.
+- Updated CI secret scanning from `gitleaks/gitleaks-action` v2 to v3.
+- Documented the built-in rate limiter's multi-worker limitation in `SECURITY.md`.
+
+### Tests
+
+- Added regression coverage for request ID sanitization, URL path log sanitization, exact CSP/Permissions-Policy values, HSTS behavior, and security headers on rate-limited responses.
+
 ## [0.3.1] - 2026-06-12
 
 ### What's new
@@ -246,7 +284,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.3.1
 [0.3.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.0...v0.3.1
 [0.2.3]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.2.3
