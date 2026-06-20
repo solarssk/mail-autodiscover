@@ -25,18 +25,19 @@ _rate_limit_store: dict[str, list[float]] = defaultdict(list)
 _rate_limit_lock = Lock()
 _last_rate_limit_cleanup = 0.0
 
-_LOG_CONTROL_RE = re.compile(r"[\x00-\x1F\x7F]")
+_LOG_UNSAFE_RE = re.compile(r"[\x00-\x1F\x7F=\s]")
+_REQUEST_ID_SAFE_RE = re.compile(r"[^A-Za-z0-9._-]")
 
 
 def _sanitize_for_log(value: str) -> str:
-    """Replace ASCII control characters with '?' to prevent log-injection via newlines."""
-    return _LOG_CONTROL_RE.sub("?", value)
+    """Replace chars that could break key=value log parsing (controls, '=', whitespace)."""
+    return _LOG_UNSAFE_RE.sub("?", value)
 
 
 def _sanitize_request_id(raw: str | None) -> str:
-    """Return a sanitised request ID; strip control chars or generate a fresh one."""
+    """Return a sanitised request ID; allow only safe token chars or generate a fresh one."""
     if raw:
-        sanitized = _LOG_CONTROL_RE.sub("", raw)[:64].strip()
+        sanitized = _REQUEST_ID_SAFE_RE.sub("", raw)[:64]
         if sanitized:
             return sanitized
     return str(uuid.uuid4())[:8]

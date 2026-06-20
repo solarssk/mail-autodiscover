@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.security import (
+    SecurityMiddleware,
     _rate_limit_store,
     _sanitize_for_log,
     _sanitize_request_id,
@@ -31,8 +32,8 @@ def test_security_headers_present(client: TestClient) -> None:
     assert response.headers.get("Referrer-Policy") == "no-referrer"
     assert response.headers.get("X-Frame-Options") == "DENY"
     assert response.headers.get("Cache-Control") == "no-store"
-    assert response.headers.get("Content-Security-Policy") is not None
-    assert response.headers.get("Permissions-Policy") is not None
+    assert response.headers.get("Content-Security-Policy") == SecurityMiddleware._CSP
+    assert response.headers.get("Permissions-Policy") == SecurityMiddleware._PERMISSIONS_POLICY
 
 
 def test_hsts_set_when_https_base_url() -> None:
@@ -53,16 +54,19 @@ def test_hsts_not_set_when_http_base_url() -> None:
     assert "Strict-Transport-Security" not in response.headers
 
 
-def test_sanitize_for_log_replaces_control_chars() -> None:
-    assert _sanitize_for_log("/probe\nendpoint=/admin") == "/probe?endpoint=/admin"
+def test_sanitize_for_log_replaces_unsafe_chars() -> None:
+    assert _sanitize_for_log("/probe\nendpoint=/admin") == "/probe?endpoint?/admin"
+    assert _sanitize_for_log("/probe status=200") == "/probe?status?200"
     assert _sanitize_for_log("no-controls") == "no-controls"
 
 
-def test_sanitize_request_id_strips_control_chars() -> None:
+def test_sanitize_request_id_strips_unsafe_chars() -> None:
     assert _sanitize_request_id("legit\nevil") == "legitevil"
-    fallback = _sanitize_request_id("\n\r")
+    assert _sanitize_request_id("abc=def ghi") == "abcdefghi"
+    fallback = _sanitize_request_id("\n\r=")
     assert "\n" not in fallback
     assert "\r" not in fallback
+    assert "=" not in fallback
     assert len(fallback) == 8
 
 
@@ -72,22 +76,27 @@ def test_request_id_control_chars_stripped(caplog: pytest.LogCaptureFixture) -> 
     settings = make_settings(disable_access_log=False, log_level="INFO")
     app = create_app(FixedSettingsProvider(settings))
     injected = "legit\nevil=injected endpoint=/admin status=200"
+    expected_id = _sanitize_request_id(injected)
     with caplog.at_level(logging.INFO, logger="mail_autodiscover.access"), TestClient(
         app, headers={"X-Request-ID": injected}
     ) as c:
         response = c.get("/mail/config-v1.1.xml", params={"emailaddress": "user@example.com"})
 
     returned_id = response.headers.get("X-Request-ID", "")
+    assert returned_id == expected_id
     assert "\n" not in returned_id
     assert "\r" not in returned_id
     assert "\x00" not in returned_id
+    assert "=" not in returned_id
+    assert " " not in returned_id
 
     assert len(caplog.records) == 1
+    log_text = caplog.records[0].message
     for record in caplog.records:
         assert "\n" not in record.message
         assert "\r" not in record.message
-    log_text = caplog.records[0].message
-    assert f"request_id={returned_id}" in log_text
+    assert log_text.startswith(f"request_id={expected_id} ")
+    assert log_text.count("status=") == 1
 
 
 def test_path_control_chars_sanitized_in_logs(caplog: pytest.LogCaptureFixture) -> None:
@@ -104,9 +113,10 @@ def test_path_control_chars_sanitized_in_logs(caplog: pytest.LogCaptureFixture) 
     for record in caplog.records:
         assert "\n" not in record.message
         assert "\r" not in record.message
-    # Forged status=200 stays inside endpoint=; real HTTP status is logged last.
+    # Forged status=200 must not appear as a separate key=value token.
     assert "endpoint=" in log_text
     assert log_text.endswith("status=404 domain_allowed=None")
+    assert log_text.count("status=") == 1
 
 
 def test_rate_limit_when_enabled() -> None:

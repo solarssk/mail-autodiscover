@@ -66,7 +66,7 @@ There is no admin API in the current version. Configuration comes from environme
 - Safe XML parsing with `defusedxml`
 - Request body size limit
 - XML output escaping via `html.escape`
-- Log-injection prevention: `X-Request-ID` and URL paths are stripped of ASCII control characters before any log write
+- Log-injection prevention: `X-Request-ID` and URL paths are restricted to safe characters before any log write (`X-Request-ID`: alphanumerics plus `._-`; paths: control chars, whitespace, and `=` replaced)
 - Rate limiting per IP with `RATE_LIMIT_PER_MINUTE` and bounded in-memory storage
 - Security headers: `nosniff`, `no-referrer`, `X-Frame-Options: DENY`, `Cache-Control: no-store`, `Content-Security-Policy`, `Permissions-Policy`, and `Strict-Transport-Security` (when `PUBLIC_BASE_URL` uses `https://`)
 - Neutral error responses that do not expose your domain list
