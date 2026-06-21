@@ -10,17 +10,26 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### What's new
 
-- Documentation corrections only; no runtime or configuration changes.
+- AI coding-agent context files added; documentation corrections.
 
 ### What this means
 
+- `CLAUDE.md` and `AGENTS.md` give AI coding assistants (Claude Code, OpenAI Codex, and others)
+  a concise map of the project: architecture, commands, security invariants, and release process.
+  This avoids agents having to re-derive project conventions from scratch on each session.
 - CHANGELOG version links now point to the correct diff range for each release.
-- `CONTRIBUTING.md` correctly references the `docs/` directory instead of the GitHub Wiki, which was superseded in `0.3.0`.
+- `CONTRIBUTING.md` correctly references the `docs/` directory instead of the GitHub Wiki,
+  which was superseded in `0.3.0`.
 - `pyproject.toml` project description now includes Apple Mail, which has been supported since `0.2.0`.
 
 ### Action required
 
 - No action required.
+
+### Added
+
+- `CLAUDE.md` — project context file for Claude Code.
+- `AGENTS.md` — project context file for OpenAI Codex and other AI agents (mirrors `CLAUDE.md`).
 
 ### Changed
 
