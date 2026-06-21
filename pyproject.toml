@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mail-autodiscover"
-version = "0.3.2"
-description = "Lightweight Outlook Autodiscover and Thunderbird Autoconfig service for self-hosted mail servers"
+version = "0.3.3"
+description = "Lightweight Outlook Autodiscover, Thunderbird Autoconfig and Apple Mail profile service for self-hosted mail servers"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"

@@ -6,6 +6,37 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-06-21
+
+### What's new
+
+- AI coding-agent context files added; documentation corrections.
+
+### What this means
+
+- `CLAUDE.md` and `AGENTS.md` give AI coding assistants (Claude Code, OpenAI Codex, and others)
+  a concise map of the project: architecture, commands, security invariants, and release process.
+  This avoids agents having to re-derive project conventions from scratch on each session.
+- CHANGELOG version links now point to the correct diff range for each release.
+- `CONTRIBUTING.md` correctly references the `docs/` directory instead of the GitHub Wiki,
+  which was superseded in `0.3.0`.
+- `pyproject.toml` project description now includes Apple Mail, which has been supported since `0.2.0`.
+
+### Action required
+
+- No action required.
+
+### Added
+
+- `CLAUDE.md` — project context file for Claude Code.
+- `AGENTS.md` — project context file for OpenAI Codex and other AI agents (mirrors `CLAUDE.md`).
+
+### Changed
+
+- Fixed all CHANGELOG version comparison links — each link now points to `compare/vPREV...vVERSION` for its own release.
+- Updated `CONTRIBUTING.md`: replaced the stale reference to the GitHub Wiki with the `docs/` directory.
+- Updated `pyproject.toml` description to include Apple Mail profile support.
+
 ## [0.3.2] - 2026-06-20
 
 ### What's new
@@ -284,14 +315,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.1...v0.3.2
-[0.3.1]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.3.1
-[0.3.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.0...v0.3.1
-[0.2.3]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.2.3
-[0.2.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.2...v0.2.3
-[0.2.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.1...v0.2.2
-[0.2.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.0...v0.2.1
-[0.1.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.1.2...v0.2.0
-[0.1.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.1.1...v0.1.2
+[0.3.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.3...v0.3.0
+[0.2.3]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.2...v0.2.3
+[0.2.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.1.2...v0.2.0
+[0.1.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/solarssk/mail-autodiscover/releases/tag/v0.1.0
