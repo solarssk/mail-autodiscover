@@ -28,3 +28,10 @@ updates:
       python-dependencies:
         patterns:
           - "*"
+    ignore:
+      # Transitive pin of pydantic; pip-compile resolves it against pydantic's
+      # own constraint. Dependabot bumps it standalone without checking that
+      # constraint, which breaks --require-hashes installs (see #71/#74).
+      # Remove once pydantic itself releases a version compatible with the
+      # newer pydantic-core.
+      - dependency-name: "pydantic-core"
