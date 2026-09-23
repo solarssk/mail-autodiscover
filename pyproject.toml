@@ -31,7 +31,7 @@ lint = [
     # Pinned exactly, matching .pre-commit-config.yaml's `rev:` -- CI and
     # pre-commit must run the same ruff version so a rule added upstream
     # can't pass in one and fail in the other.
-    "ruff==0.16.6",
+    "ruff==0.16.8",
 ]
 typecheck = [
     "mypy>=1.13.0",
