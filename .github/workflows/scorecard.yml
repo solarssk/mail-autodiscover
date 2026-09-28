@@ -1,0 +1,49 @@
+name: OpenSSF Scorecard
+
+# Report-only independent check of controls this repo already claims (branch
+# protection, pinned dependencies, token permissions, SAST, security policy,
+# and so on): most of what Scorecard scores is already on the Tier 2 list, so
+# this verifies existing items rather than adding a new burden. Nothing here
+# gates a merge. See solarssk/playbook docs/openssf.md.
+#
+# Runs on push to the default branch, on branch-protection changes (one of the
+# things Scorecard scores), and weekly -- a few checks depend on repository
+# activity over time rather than the current diff. Deliberately kept off the
+# pull request path.
+
+on:
+  branch_protection_rule:
+  schedule:
+    - cron: "0 4 * * 3"
+  push:
+    branches: ["main"]
+
+# Deny-all at the top; the job below grants only what it needs. Scorecard's
+# Token-Permissions check requires a top-level `permissions:` key to exist.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read # Scorecard reads workflow files for its own checks
+      id-token: write # sign and publish results to the public Scorecard API
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # publish_results only works on a public repository (this one is);
+      # publishing is what makes the README badge and the public viewer work.
+      - uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc  # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
