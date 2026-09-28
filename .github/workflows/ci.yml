@@ -32,19 +32,31 @@ jobs:
           tar -xzf gitleaks.tar.gz gitleaks
           echo "$PWD" >> "$GITHUB_PATH"
 
+      # Context values reach the shell through env:, never through ${{ }}
+      # inside run: -- an expression there is substituted into the script
+      # text before the shell parses it, so a value an outsider can
+      # influence becomes code instead of data (zizmor: template-injection).
       - name: Compute scan range
         id: range
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "range=origin/${{ github.base_ref }}..HEAD" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            echo "range=${{ github.event.before }}..${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "range=origin/${BASE_REF}..HEAD" >> "$GITHUB_OUTPUT"
+          elif [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            echo "range=${BEFORE_SHA}..${HEAD_SHA}" >> "$GITHUB_OUTPUT"
           else
             echo "range=-1" >> "$GITHUB_OUTPUT"
           fi
 
       - name: gitleaks (scoped to this run's commits)
-        run: gitleaks detect --source . --log-opts="${{ steps.range.outputs.range }}" --exit-code 1
+        env:
+          SCAN_RANGE: ${{ steps.range.outputs.range }}
+        run: gitleaks detect --source . --log-opts="$SCAN_RANGE" --exit-code 1
 
   docs-impact:
     name: Documentation impact declaration

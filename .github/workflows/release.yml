@@ -75,6 +75,8 @@ jobs:
       # past success to decide whether to redo it.
       - name: Detect version bump
         id: bump
+        env:
+          EVENT_BEFORE: ${{ github.event.before }}
         run: |
           set -euo pipefail
           NEW="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
@@ -84,7 +86,7 @@ jobs:
           fi
           TAG="v${NEW}"
 
-          BEFORE="${{ github.event.before }}"
+          BEFORE="$EVENT_BEFORE"
           HAVE_BEFORE=false
           if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
             HAVE_BEFORE=true
@@ -156,8 +158,10 @@ jobs:
       - name: Build formatted release notes
         if: steps.bump.outputs.skip != 'true'
         id: notes
+        env:
+          RELEASE_TAG: ${{ steps.bump.outputs.tag }}
         run: |
-          python scripts/format_release_notes.py "${{ steps.bump.outputs.tag }}" > /tmp/release-notes.md
+          python scripts/format_release_notes.py "$RELEASE_TAG" > /tmp/release-notes.md
           echo "path=/tmp/release-notes.md" >> "$GITHUB_OUTPUT"
 
       # --target pins the new tag to the exact commit this run checked out
@@ -200,9 +204,10 @@ jobs:
         if: steps.bump.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.bump.outputs.tag }}
+          NOTES_PATH: ${{ steps.notes.outputs.path }}
         run: |
           set -euo pipefail
-          TAG="${{ steps.bump.outputs.tag }}"
           # `gh api` writes the response body to stdout on both success and
           # failure, and its own exit code is 1 "for any reason" (its own
           # docs' words) -- it doesn't distinguish a nonexistent ref from a
@@ -225,9 +230,9 @@ jobs:
           RESPONSE="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TAG}" 2>/dev/null || true)"
           EXISTING_SHA="$(printf '%s' "$RESPONSE" | jq -r '.sha // empty' 2>/dev/null || true)"
           if [ -n "$EXISTING_SHA" ]; then
-            if [ "$EXISTING_SHA" != "${{ github.sha }}" ]; then
+            if [ "$EXISTING_SHA" != "$GITHUB_SHA" ]; then
               echo "::error::Tag $TAG already exists but resolves to a different commit" \
-                   "(${EXISTING_SHA}, not ${{ github.sha }}). This looks like a reused or" \
+                   "(${EXISTING_SHA}, not ${GITHUB_SHA}). This looks like a reused or" \
                    "rolled-back version number in pyproject.toml, or an orphaned tag left over" \
                    "from an earlier manual push or failed release -- refusing to publish under it." >&2
               exit 1
@@ -249,9 +254,9 @@ jobs:
           fi
           args=(
             --repo "${GITHUB_REPOSITORY}"
-            --target "${{ github.sha }}"
+            --target "$GITHUB_SHA"
             --title "$TAG"
-            --notes-file "${{ steps.notes.outputs.path }}"
+            --notes-file "$NOTES_PATH"
           )
           if printf '%s' "$TAG" | grep -q -- '-'; then
             args+=(--prerelease)
@@ -268,9 +273,9 @@ jobs:
         if: steps.bump.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.bump.outputs.tag }}
         run: |
           set -euo pipefail
-          TAG="${{ steps.bump.outputs.tag }}"
           gh workflow run docker-publish.yml --repo "${GITHUB_REPOSITORY}" --ref "$TAG"
           echo "Triggered docker-publish for ${TAG}."
 
@@ -278,9 +283,9 @@ jobs:
         if: steps.bump.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.bump.outputs.tag }}
         run: |
           set -euo pipefail
-          TAG="${{ steps.bump.outputs.tag }}"
           MID="$(gh api "repos/${GITHUB_REPOSITORY}/milestones" \
             --jq ".[] | select(.title == \"${TAG}\" and .state == \"open\") | .number" \
             | head -n 1)"

@@ -68,6 +68,7 @@ practical benefit.
 | Type check (mypy) | Static typing on `app/` |
 | Security (bandit + pip-audit) | Code and dependency security |
 | Docker build and scan | Image build + Trivy scan (blocks HIGH/CRITICAL on PR; advisory SARIF upload on `main`) |
+| Lint workflows (actionlint, zizmor) | Only when `.github/workflows/**` or `dependabot.yml` change: actionlint for correctness, zizmor for safety (template injection, excessive permissions, missing Dependabot cooldown) |
 
 `docker-publish.yml` only ever builds from source on a push to `main`: each platform
 (`linux/amd64`, `linux/arm64`) builds and scans in parallel, gated on fixable HIGH/CRITICAL,
