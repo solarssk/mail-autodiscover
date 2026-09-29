@@ -242,15 +242,38 @@ jobs:
       # satisfy pyproject.toml, so re-running it without --upgrade reproduces
       # the same file unless pyproject.toml's own constraints changed without
       # regenerating the lock to match.
-      - name: Verify requirements*.txt matches pyproject.toml
+      - name: Verify requirements.txt matches pyproject.toml
+        run: |
+          pip-compile --generate-hashes --allow-unsafe -o requirements.txt pyproject.toml
+          git diff --exit-code requirements.txt
+
+  dev-dependency-lock:
+    name: Verify requirements-*.txt matches pyproject.toml
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      # 3.12, not the 3.14 the runtime lockfile above uses: these lockfiles
+      # back the dev-tool jobs elsewhere in this file, which all run on 3.12
+      # (this repo's requires-python floor) -- pip-compile resolves
+      # marker-conditional dependencies using whatever interpreter runs it,
+      # so verifying under a different version than the one that produced
+      # the committed files would report a spurious diff.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install "pip-tools==7.6.1"
+      - name: Verify requirements-*.txt matches pyproject.toml
         run: |
           set -euo pipefail
-          pip-compile --generate-hashes --allow-unsafe -o requirements.txt pyproject.toml
           for extra in test lint typecheck security; do
             pip-compile --extra "$extra" --generate-hashes --allow-unsafe \
               -o "requirements-${extra}.txt" pyproject.toml
           done
-          git diff --exit-code requirements.txt requirements-test.txt requirements-lint.txt \
+          git diff --exit-code requirements-test.txt requirements-lint.txt \
             requirements-typecheck.txt requirements-security.txt
 
   compat:
