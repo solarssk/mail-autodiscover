@@ -102,12 +102,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   published as an OCI referrer on GHCR and uploaded to the GitHub Release as
   `image.sigstore.json`, closing OpenSSF Scorecard's Signed-Releases finding. Verifiable with
   `gh attestation verify oci://ghcr.io/solarssk/mail-autodiscover@<digest>`.
-- `scorecard.yml` now optionally passes a `SCORECARD_TOKEN` secret (a fine-grained PAT scoped
-  to this repo, `Administration: Read-only`) to `ossf/scorecard-action`, so its
-  Branch-Protection check can actually read classic branch-protection settings instead of
-  erroring — the default `GITHUB_TOKEN` can't (`Administration` isn't a grantable
-  `GITHUB_TOKEN` permission). Falls back to `GITHUB_TOKEN` (this action's own default) until
-  the secret is added.
+- `scorecard.yml` now feeds `ossf/scorecard-action` a token with read access to classic
+  branch-protection settings, so its Branch-Protection check can actually run instead of
+  erroring — the default `GITHUB_TOKEN` can't read them at all (`Administration` isn't a
+  grantable `GITHUB_TOKEN` permission). Prefers a short-lived GitHub App installation token
+  (`RELEASE_APP_ID`/`RELEASE_APP_PRIVATE_KEY`, `Administration: Read-only` +
+  `Contents: Read-only`, nothing to rotate by hand) over a standing `SCORECARD_TOKEN`
+  fine-grained PAT, over the action's own `GITHUB_TOKEN` default — each tier is optional and
+  falls through to the next until one is configured.
 
 ## [0.4.0] - 2026-09-09
 
