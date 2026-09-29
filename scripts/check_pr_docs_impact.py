@@ -45,9 +45,11 @@ def main() -> int:
     if not pull_request:
         return 0
 
+    # Automated dependency PRs can't fill in a hand-written template body.
+    # Match the author, never the branch name: anyone can open a PR from a
+    # branch called dependabot/... and would otherwise skip this check.
     author_login = (pull_request.get("user") or {}).get("login", "")
-    head_ref = (pull_request.get("head") or {}).get("ref", "")
-    if author_login == "dependabot[bot]" or head_ref.startswith("dependabot/"):
+    if author_login == "dependabot[bot]":
         return 0
 
     body = pull_request.get("body") or ""
