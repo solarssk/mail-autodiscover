@@ -8,12 +8,6 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-RUN apt-get update \
-    && apt-get upgrade -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* \
-    && addgroup --system app \
-    && adduser --system --ingroup app app
-
 COPY pyproject.toml README.md requirements.txt ./
 COPY app ./app
 # app/static includes favicon.ico and apple-touch-icon.png
@@ -30,6 +24,30 @@ RUN pip install --no-cache-dir --upgrade "pip>=26.1.2" \
     && pip install --no-cache-dir --require-hashes -r requirements.txt \
     && pip install --no-cache-dir --no-deps . \
     && pip uninstall -y pip
+
+# CACHEBUST forces this layer to actually re-run on every build instead of
+# being served from Docker's build cache indefinitely -- its cache key would
+# otherwise depend only on this unchanging RUN command text and the base
+# image's own pinned digest above, so apt-get upgrade silently stopped doing
+# anything after the first build off a given digest (confirmed: every build
+# log showed this step as "CACHED", including ones weeks apart) while this
+# image kept shipping whatever OS packages existed at that one build. Passed
+# as a real build-arg (docker-publish.yml uses run_id-run_attempt, unique
+# per workflow run/retry -- not the commit SHA, which would stay identical
+# across a workflow_dispatch or re-run on an unchanged commit and let the
+# cache serve the same stale layer again) rather than left at its default,
+# so every published image gets that day's Debian security patches
+# regardless of how stale the pinned base digest is.
+# Placed as late as possible, after COPY/pip install, so busting it doesn't
+# also force those layers -- correctly keyed on actual file content -- to
+# redo on every build.
+ARG CACHEBUST=1
+RUN : "${CACHEBUST}" \
+    && apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && addgroup --system app \
+    && adduser --system --ingroup app app
 
 USER app
 
