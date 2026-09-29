@@ -44,13 +44,21 @@ jobs:
           queries: security-extended
           config-file: ./.github/codeql/codeql-config.yml
 
+      # 3.14, matching the Dockerfile's base image and requirements.txt's own
+      # compile target (see CONTRIBUTING.md's Dependencies section) --
+      # requirements.txt is only ever meant to be installed under the Python
+      # version it was resolved for.
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         if: matrix.language == 'python'
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache: pip
 
-      - run: pip install .
+      # Hash-pinned runtime lockfile instead of a bare `pip install .`, so
+      # CodeQL both analyzes the exact dependency versions actually shipped
+      # in production and fails closed on a substituted/compromised package
+      # on the index, same as the Dockerfile and CI's other jobs.
+      - run: pip install --require-hashes -r requirements.txt
         if: matrix.language == 'python'
 
       - uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd  # v4.38.1
