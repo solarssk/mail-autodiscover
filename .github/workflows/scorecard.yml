@@ -40,27 +40,75 @@ jobs:
         with:
           persist-credentials: false
 
+      # The default GITHUB_TOKEN has no Administration permission, so
+      # Scorecard cannot read classic branch protection with it and
+      # Branch-Protection errors out instead of scoring -- the same GitHub
+      # API limitation documented at
+      # https://github.com/ossf/scorecard-action/blob/main/docs/authentication/fine-grained-auth-token.md.
+      # A GitHub App installation token, minted fresh per run with only
+      # read-only Administration and read-only Contents, is preferred over a
+      # standing PAT: each MINTED TOKEN expires in about an hour, limiting
+      # how long a token leaked from a workflow run stays useful. That is
+      # narrower than a PAT, but it is not the same as "nothing long-lived to
+      # rotate": AUTOMATION_APP_PRIVATE_KEY itself does not expire, and
+      # anyone holding it can mint fresh tokens indefinitely until the key is
+      # manually revoked -- it is a long-lived credential in exactly the same
+      # sense a PAT is, and needs the same rotation/revocation handling (see
+      # SECURITY.md). AUTOMATION_APP_* is this repo's own dedicated App
+      # (Administration: Read-only, Contents: Read-only, nothing else,
+      # installed only here) -- not shared with any other repository, so a
+      # leaked key's blast radius stays scoped to this one project, which is
+      # the actual, real benefit here. Named for the repo, not the one thing
+      # it happens to be used for today, so a later, genuinely new
+      # narrowly-scoped need in this repo can reuse it instead of spawning
+      # another App; its permission set stays whatever the current uses
+      # actually need, expanded later (with GitHub re-prompting for
+      # approval) only when a real one shows up, not provisioned ahead of
+      # time.
+      #
+      # `secrets` isn't a valid context inside a step's `if:` (actionlint
+      # catches this), so presence is checked here via `env:` (where secrets
+      # ARE allowed) instead, and the next step's `if:` reads this step's
+      # output -- `steps` is a valid `if:` context.
+      - name: Check for automation app credentials
+        id: app-check
+        env:
+          AUTOMATION_APP_ID: ${{ secrets.AUTOMATION_APP_ID }}
+          AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$AUTOMATION_APP_ID" ] && [ -n "$AUTOMATION_APP_PRIVATE_KEY" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Skipped (not failed) when the app secrets don't exist yet.
+      - name: Mint Scorecard read token
+        id: app-token
+        if: steps.app-check.outputs.configured == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ secrets.AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+          permission-administration: read
+          permission-contents: read
+
       # publish_results only works on a public repository (this one is);
       # publishing is what makes the README badge and the public viewer work.
       #
-      # repo_token is optional: without it, Scorecard falls back to the
-      # default GITHUB_TOKEN, which cannot read classic branch-protection
-      # settings ("Administration" isn't a grantable GITHUB_TOKEN permission
-      # -- the same GitHub API limitation solarssk/playbook's own verify-tier
-      # hits, documented at
-      # https://github.com/ossf/scorecard-action/blob/main/docs/authentication/fine-grained-auth-token.md).
-      # Without the token, Scorecard's Branch-Protection check errors out
-      # instead of scoring, unlike playbook's check (which only skips its own
-      # internal bookkeeping): this one directly lowers the real, published
-      # Scorecard score. SCORECARD_TOKEN is a fine-grained PAT scoped to only
-      # this repository, with "Administration: Read-only" and nothing else --
-      # falls back to secrets.GITHUB_TOKEN (this action's own default) when
-      # that secret doesn't exist yet, since explicitly passing an empty
-      # string would override the action's own default with nothing, which
-      # is worse than not setting this input at all.
+      # repo_token is optional -- falls through, in order: the freshly minted
+      # GitHub App token (best: short-lived, least privilege); a
+      # SCORECARD_TOKEN fine-grained PAT (Administration: Read-only, no
+      # expiry management via an App) if that's set up instead; the action's
+      # own default GITHUB_TOKEN otherwise, same as today. A skipped step's
+      # output and an unset secret both evaluate to an empty string, which is
+      # falsy, so `||` correctly falls through each tier -- explicitly
+      # passing an empty string here instead would override the action's own
+      # GITHUB_TOKEN default with nothing, which is worse than not setting
+      # this input at all.
       - uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc  # v2.4.4
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
-          repo_token: ${{ secrets.SCORECARD_TOKEN || secrets.GITHUB_TOKEN }}
+          repo_token: ${{ steps.app-token.outputs.token || secrets.SCORECARD_TOKEN || secrets.GITHUB_TOKEN }}

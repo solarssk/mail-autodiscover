@@ -106,12 +106,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   Sigstore mechanism, a distinct predicate type from the image provenance above), published to
   GHCR and uploaded to the GitHub Release as `sbom-amd64.sigstore.json` /
   `sbom-arm64.sigstore.json`.
-- `scorecard.yml` now optionally passes a `SCORECARD_TOKEN` secret (a fine-grained PAT scoped
-  to this repo, `Administration: Read-only`) to `ossf/scorecard-action`, so its
-  Branch-Protection check can actually read classic branch-protection settings instead of
-  erroring — the default `GITHUB_TOKEN` can't (`Administration` isn't a grantable
-  `GITHUB_TOKEN` permission). Falls back to `GITHUB_TOKEN` (this action's own default) until
-  the secret is added.
+- `scorecard.yml` now feeds `ossf/scorecard-action` a token with read access to classic
+  branch-protection settings, so its Branch-Protection check can actually run instead of
+  erroring — the default `GITHUB_TOKEN` can't read them at all (`Administration` isn't a
+  grantable `GITHUB_TOKEN` permission). Prefers a GitHub App installation token
+  (`AUTOMATION_APP_ID`/`AUTOMATION_APP_PRIVATE_KEY` — a dedicated app for this repo only, not
+  shared with any other project, scoped to `Administration: Read-only` + `Contents: Read-only`)
+  over a standing `SCORECARD_TOKEN` fine-grained PAT, over the action's own `GITHUB_TOKEN`
+  default — each tier is optional and falls through to the next until one is configured. Each
+  minted installation token expires in about an hour, but the App's own private key does not:
+  it is a long-lived credential like any other and needs the same rotation/revocation handling
+  (see SECURITY.md).
 
 ## [0.4.0] - 2026-09-09
 
