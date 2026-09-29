@@ -97,6 +97,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   layer again), forcing it to actually execute on every build. Verified: rebuilding with a
   new `CACHEBUST` value did upgrade `openssl` (`3.0.20-1~deb12u2` → `3.0.22-1~deb12u1`),
   confirming the previously cached layer really was stale.
+- `docker-publish.yml`'s `promote` job now signs the promoted container image with a keyless
+  Sigstore attestation (`actions/attest`, OIDC via Fulcio/Rekor — no static key to manage),
+  published as an OCI referrer on GHCR and uploaded to the GitHub Release as
+  `image.sigstore.json`, closing OpenSSF Scorecard's Signed-Releases finding. Verifiable with
+  `gh attestation verify oci://ghcr.io/solarssk/mail-autodiscover@<digest>`.
+- `scorecard.yml` now optionally passes a `SCORECARD_TOKEN` secret (a fine-grained PAT scoped
+  to this repo, `Administration: Read-only`) to `ossf/scorecard-action`, so its
+  Branch-Protection check can actually read classic branch-protection settings instead of
+  erroring — the default `GITHUB_TOKEN` can't (`Administration` isn't a grantable
+  `GITHUB_TOKEN` permission). Falls back to `GITHUB_TOKEN` (this action's own default) until
+  the secret is added.
 
 ## [0.4.0] - 2026-09-09
 

@@ -42,8 +42,25 @@ jobs:
 
       # publish_results only works on a public repository (this one is);
       # publishing is what makes the README badge and the public viewer work.
+      #
+      # repo_token is optional: without it, Scorecard falls back to the
+      # default GITHUB_TOKEN, which cannot read classic branch-protection
+      # settings ("Administration" isn't a grantable GITHUB_TOKEN permission
+      # -- the same GitHub API limitation solarssk/playbook's own verify-tier
+      # hits, documented at
+      # https://github.com/ossf/scorecard-action/blob/main/docs/authentication/fine-grained-auth-token.md).
+      # Without the token, Scorecard's Branch-Protection check errors out
+      # instead of scoring, unlike playbook's check (which only skips its own
+      # internal bookkeeping): this one directly lowers the real, published
+      # Scorecard score. SCORECARD_TOKEN is a fine-grained PAT scoped to only
+      # this repository, with "Administration: Read-only" and nothing else --
+      # falls back to secrets.GITHUB_TOKEN (this action's own default) when
+      # that secret doesn't exist yet, since explicitly passing an empty
+      # string would override the action's own default with nothing, which
+      # is worse than not setting this input at all.
       - uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc  # v2.4.4
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
+          repo_token: ${{ secrets.SCORECARD_TOKEN || secrets.GITHUB_TOKEN }}
