@@ -12,6 +12,7 @@ updates:
       default-days: 7
     labels:
       - "dependencies"
+      - "type: chore"
     groups:
       github-actions:
         patterns:
@@ -25,6 +26,7 @@ updates:
       default-days: 7
     labels:
       - "dependencies"
+      - "type: chore"
 
   - package-ecosystem: "pip"
     directory: "/"
@@ -34,6 +36,7 @@ updates:
       default-days: 7
     labels:
       - "dependencies"
+      - "type: chore"
     groups:
       python-dependencies:
         patterns:
