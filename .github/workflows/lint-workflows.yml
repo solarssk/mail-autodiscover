@@ -55,8 +55,15 @@ jobs:
           tar -xzf "$archive" actionlint
           echo "$PWD" >> "$GITHUB_PATH"
 
+      # No path argument: actionlint's own auto-discovery finds every
+      # workflow under .github/workflows/, including a `.yaml` extension --
+      # GitHub accepts either. An explicit `*.yml` glob would silently skip
+      # any `.yaml` file instead of failing, since the shell glob itself
+      # (not actionlint) decides what gets checked. Verified: a workflow
+      # saved as `.yaml` with a real error is caught by bare `actionlint`
+      # and missed entirely by the `*.yml` glob.
       - name: actionlint
-        run: actionlint .github/workflows/*.yml
+        run: actionlint
 
       # `version:` is pinned: the default is `latest`, a floating reference
       # inside an otherwise SHA-pinned step. `advanced-security: false` keeps
