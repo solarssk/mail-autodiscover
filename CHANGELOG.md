@@ -102,6 +102,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   published as an OCI referrer on GHCR and uploaded to the GitHub Release as
   `image.sigstore.json`, closing OpenSSF Scorecard's Signed-Releases finding. Verifiable with
   `gh attestation verify oci://ghcr.io/solarssk/mail-autodiscover@<digest>`.
+- Each platform's CycloneDX SBOM gets its own signed SBOM attestation too (same keyless
+  Sigstore mechanism, a distinct predicate type from the image provenance above), published to
+  GHCR and uploaded to the GitHub Release as `sbom-amd64.sigstore.json` /
+  `sbom-arm64.sigstore.json`.
 - `scorecard.yml` now optionally passes a `SCORECARD_TOKEN` secret (a fine-grained PAT scoped
   to this repo, `Administration: Read-only`) to `ossf/scorecard-action`, so its
   Branch-Protection check can actually read classic branch-protection settings instead of
