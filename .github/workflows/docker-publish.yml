@@ -6,14 +6,20 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
-# Concurrency is set per job below, not once here for the whole workflow --
-# `build`/`manifest` (main pushes) and `promote` (version tags) need
-# different keys. See each job's own comment for why.
+# Two layers of concurrency, on purpose. This workflow-level group only
+# serializes *identical* runs (same ref AND same commit -- a retry, or a
+# duplicate push event for one merge), never different commits, so unlike a
+# per-ref group it cannot evict a release commit's build in favor of a later
+# push. The per-job groups below add the finer keys each job needs; see each
+# job's own comment for why. Nothing here ever cancels a run in progress.
+concurrency:
+  group: docker-publish-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
-permissions:
-  contents: write
-  packages: write
-  security-events: write
+# Deny-all at the top; every job below grants only the scopes it uses
+# (zizmor: excessive-permissions -- a workflow-level write grant applies to
+# every job whether it needs it or not).
+permissions: {}
 
 env:
   REGISTRY: ghcr.io
@@ -54,6 +60,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read # checkout
+      packages: write # push the per-platform image by digest to GHCR
+      security-events: write # upload the Trivy SARIF to the Security tab
     # matrix.arch is part of the key: without it, both matrix legs for the
     # same commit resolve to the identical group name, so GitHub Actions
     # only ever runs one of them at a time -- silently defeating the whole
@@ -154,9 +164,12 @@ jobs:
       # both) -- passed via a small artifact per architecture instead, which
       # the manifest job below downloads and reads.
       - name: Save digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          ARCH: ${{ matrix.arch }}
         run: |
           mkdir -p /tmp/digests
-          echo "${{ steps.build.outputs.digest }}" > "/tmp/digests/${{ matrix.arch }}.digest"
+          echo "$DIGEST" > "/tmp/digests/${ARCH}.digest"
 
       # overwrite: true -- artifacts persist across attempts of the same
       # run, and upload-artifact fails by default if a same-named one
@@ -180,6 +193,9 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read # gh api: read main's current tip
+      packages: write # publish the multi-arch manifest tags to GHCR
     # Per commit, matching `build` above -- so this run is never evicted by
     # an unrelated commit's manifest job either.
     concurrency:
@@ -225,12 +241,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          current_tip="$(gh api "repos/${{ github.repository }}/commits/main" --jq '.sha')"
-          if [ "$current_tip" = "${{ github.sha }}" ]; then
+          current_tip="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          if [ "$current_tip" = "$GITHUB_SHA" ]; then
             echo "is_tip=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_tip=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::${{ github.sha }} is no longer main's tip (now ${current_tip}) -- a" \
+            echo "::warning::${GITHUB_SHA} is no longer main's tip (now ${current_tip}) -- a" \
                  "newer commit's build is racing this one. Skipping 'latest' so it doesn't end up" \
                  "pointing at the older of the two; sha-<short> below is commit-specific and" \
                  "unaffected." >&2
@@ -257,6 +273,8 @@ jobs:
       # moved.
       - name: Create and push multi-arch manifest (GHCR)
         id: manifest
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           set -euo pipefail
           amd64_digest="$(cat /tmp/digests/amd64.digest)"
@@ -264,10 +282,10 @@ jobs:
           tag_args=()
           while IFS= read -r tag; do
             [ -n "$tag" ] && tag_args+=(--tag "$tag")
-          done <<< "${{ steps.meta.outputs.tags }}"
+          done <<< "$TAGS"
           docker buildx imagetools create --metadata-file manifest.json "${tag_args[@]}" \
-            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${amd64_digest}" \
-            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${arm64_digest}"
+            "${REGISTRY}/${IMAGE_NAME}@${amd64_digest}" \
+            "${REGISTRY}/${IMAGE_NAME}@${arm64_digest}"
           digest="$(jq -r '."containerimage.descriptor".digest // empty' manifest.json)"
           [ -n "$digest" ] || { echo "::error::could not resolve merged manifest digest from metadata file"; exit 1; }
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
@@ -280,14 +298,17 @@ jobs:
       # derived by swapping the registry host only; the image path
       # (owner/repo) is identical in both registries.
       - name: Copy manifest to Docker Hub
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          MANIFEST_DIGEST: ${{ steps.manifest.outputs.digest }}
         run: |
           set -euo pipefail
           tag_args=()
           while IFS= read -r tag; do
             [ -n "$tag" ] && tag_args+=(--tag "${tag/ghcr.io/docker.io}")
-          done <<< "${{ steps.meta.outputs.tags }}"
+          done <<< "$TAGS"
           docker buildx imagetools create "${tag_args[@]}" \
-            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.manifest.outputs.digest }}"
+            "${REGISTRY}/${IMAGE_NAME}@${MANIFEST_DIGEST}"
 
   # Runs only for a version-tag push (or release.yml's `--ref vX.Y.Z`
   # dispatch, or the equivalent manual fallback documented in
@@ -313,6 +334,9 @@ jobs:
     # margin for queueing), and a job-level timeout shorter than its own
     # longest step doesn't extend the step -- it just kills the job mid-wait.
     timeout-minutes: 40
+    permissions:
+      contents: write # attach the SBOM to the GitHub Release
+      packages: write # re-tag the promoted digest in GHCR
     # Per ref (a version tag), not per commit: unlike `build`/`manifest`
     # above, different releases always have different tags, so this never
     # needs cross-release ordering -- only retries of the *same* tag should
@@ -372,7 +396,7 @@ jobs:
         run: |
           set -euo pipefail
           source_tag="sha-${GITHUB_SHA:0:7}"
-          source_ref="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${source_tag}"
+          source_ref="${REGISTRY}/${IMAGE_NAME}:${source_tag}"
           for _ in $(seq 1 180); do
             if raw="$(docker buildx imagetools inspect "$source_ref" --raw 2>/dev/null)" && [ -n "$raw" ]; then
               digest="sha256:$(printf '%s' "$raw" | sha256sum | cut -d' ' -f1)"
@@ -406,7 +430,7 @@ jobs:
           DIGEST: ${{ steps.source.outputs.digest }}
         run: |
           set -euo pipefail
-          revision="$(docker buildx imagetools inspect "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}" --format '{{json .Image}}' \
+          revision="$(docker buildx imagetools inspect "${REGISTRY}/${IMAGE_NAME}@${DIGEST}" --format '{{json .Image}}' \
             | jq -r '.["linux/amd64"].config.Labels."org.opencontainers.image.revision" // empty')"
           if [ "$revision" != "${GITHUB_SHA}" ]; then
             echo "::error::Resolved digest ${DIGEST} (via sha-${GITHUB_SHA:0:7}) was built from commit" \
@@ -432,11 +456,11 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
           docker buildx imagetools create \
-            --tag "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${version}" \
-            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}"
+            --tag "${REGISTRY}/${IMAGE_NAME}:${version}" \
+            "${REGISTRY}/${IMAGE_NAME}@${DIGEST}"
           docker buildx imagetools create \
-            --tag "${{ env.DOCKERHUB_IMAGE }}:${version}" \
-            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}"
+            --tag "${DOCKERHUB_IMAGE}:${version}" \
+            "${REGISTRY}/${IMAGE_NAME}@${DIGEST}"
 
       # Reporting only, not a second Trivy gate: the digest being promoted
       # already passed the HIGH/CRITICAL gate in the build job above, and
@@ -482,8 +506,8 @@ jobs:
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
           for _ in $(seq 1 30); do
-            if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-              gh release upload "$TAG" sbom-amd64.cdx.json sbom-arm64.cdx.json --clobber --repo "${{ github.repository }}"
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh release upload "$TAG" sbom-amd64.cdx.json sbom-arm64.cdx.json --clobber --repo "$GITHUB_REPOSITORY"
               exit 0
             fi
             sleep 10

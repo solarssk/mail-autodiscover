@@ -68,6 +68,7 @@ practical benefit.
 | Type check (mypy) | Static typing on `app/` |
 | Security (bandit + pip-audit) | Code and dependency security |
 | Docker build and scan | Image build + Trivy scan (blocks HIGH/CRITICAL on PR; advisory SARIF upload on `main`) |
+| Lint workflows (actionlint, zizmor) | Only when `.github/workflows/**` or `dependabot.yml` change: actionlint for correctness, zizmor for safety (template injection, excessive permissions, missing Dependabot cooldown) |
 
 `docker-publish.yml` only ever builds from source on a push to `main`: each platform
 (`linux/amd64`, `linux/arm64`) builds and scans in parallel, gated on fixable HIGH/CRITICAL,
@@ -79,23 +80,33 @@ tag (in both registries), and generates the CycloneDX SBOM attached to the GitHu
 from that same digest. See [SECURITY.md](SECURITY.md#security-controls--ci) for the full
 control-to-workflow mapping.
 
-## Labels
+## Labels and milestones
 
-Use labels to classify issues and PRs:
+Every issue and PR carries **exactly one `type:` label** (the playbook's standard taxonomy),
+plus any **topic labels** that apply, and — once it is part of a release — the open `vX.Y.Z`
+milestone.
 
-| Label | When to use |
-|-------|-------------|
-| `bug` | Something is broken |
-| `enhancement` | New feature or improvement |
-| `documentation` | Docs only |
+| `type:` label | When to use |
+|---------------|-------------|
+| `type: bug` | Something is broken |
+| `type: feature` | New feature or improvement |
+| `type: docs` | Docs only |
+| `type: chore` | Maintenance with no behavior change (refactor, cleanup, tooling, CI) |
+
+Topic labels say *where* or *what area*, and are added because a filter is actually useful:
+
+| Topic label | When to use |
+|-------------|-------------|
 | `security` | Security hardening or vulnerability |
 | `testing` | Tests and coverage |
-| `chore` | Maintenance with no behavior change (refactor, cleanup, tooling) |
 | `ci/cd` | CI, releases, GHCR |
-| `dependencies` | Dependency updates (often Dependabot) |
+| `dependencies` | Dependency updates (Dependabot adds this, plus `type: chore`) |
 | `outlook` | Outlook Autodiscover |
 | `thunderbird` | Thunderbird Autoconfig |
 | `mail-server` | Synology / IMAP / SMTP integration topics |
+
+Milestones group the work for each release (`v0.4.1`, ...); `release.yml` closes the matching
+one when the release is cut.
 
 ## Releases
 

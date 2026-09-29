@@ -1,0 +1,76 @@
+name: Lint workflows
+
+# Two linters, two different halves, and neither replaces the other:
+#
+# - actionlint checks that a workflow is *correct*: valid expressions, real
+#   input and job names, ShellCheck on every `run:` block. CodeQL's `actions`
+#   analysis has no queries for that.
+# - zizmor checks that it is *safe*: template injection, excessive
+#   permissions, unpinned actions, credential persistence, and a Dependabot
+#   entry without a cooldown. CodeQL covers only part of that.
+#
+# Path-filtered so it only runs when there is something for it to check.
+# `.github/dependabot.yml` is included because zizmor audits it too.
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/**"
+      - ".github/dependabot.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - ".github/dependabot.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint-workflows:
+    name: Lint workflows (actionlint, zizmor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Pinned release binary, checksum-verified before it runs, over HTTPS
+      # only -- the same treatment gitleaks gets in ci.yml.
+      - name: Install actionlint (checksum-verified)
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          # From the release's own actionlint_<version>_checksums.txt. Update it with the version.
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl --proto '=https' --tlsv1.2 -sSfL -o "$archive" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check --strict
+          tar -xzf "$archive" actionlint
+          echo "$PWD" >> "$GITHUB_PATH"
+
+      # No path argument: actionlint's own auto-discovery finds every
+      # workflow under .github/workflows/, including a `.yaml` extension --
+      # GitHub accepts either. An explicit `*.yml` glob would silently skip
+      # any `.yaml` file instead of failing, since the shell glob itself
+      # (not actionlint) decides what gets checked. Verified: a workflow
+      # saved as `.yaml` with a real error is caught by bare `actionlint`
+      # and missed entirely by the `*.yml` glob.
+      - name: actionlint
+        run: actionlint
+
+      # `version:` is pinned: the default is `latest`, a floating reference
+      # inside an otherwise SHA-pinned step. `advanced-security: false` keeps
+      # this job at `contents: read` (no SARIF upload, so no
+      # `security-events: write`); findings appear as annotations instead.
+      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482  # v0.6.4
+        with:
+          version: v1.30.1
+          advanced-security: false
+          annotations: true
