@@ -127,6 +127,31 @@ This table is a claim you can check directly: open the named workflow file and c
 step is really there. Keep it honest rather than complete — remove a row the day a control is
 removed, rather than leaving a stale entry.
 
+## Standing credentials
+
+`AUTOMATION_APP_ID` / `AUTOMATION_APP_PRIVATE_KEY` (a GitHub App dedicated to this repository
+alone, `Administration: Read-only` + `Contents: Read-only`, used by `scorecard.yml` to read
+branch-protection settings) is a long-lived credential, not a short-lived one: each installation
+token it mints expires in about an hour, but the private key itself does not, and anyone holding
+it can mint fresh tokens indefinitely until the key is revoked. Treat it like any other standing
+secret:
+
+- If it may have leaked (exposed in a log, a compromised runner, a misconfigured workflow), revoke
+  it immediately: the App's settings page → **Private keys** → delete the key. This invalidates
+  every token minted from it going forward; nothing else in this repo depends on it, so revoking
+  has no other blast radius.
+- Generate a replacement key and update the `AUTOMATION_APP_PRIVATE_KEY` secret with it. There is
+  no fixed rotation schedule — rotate on suspicion of compromise, or opportunistically when
+  touching this area, not on a calendar.
+- This App is installed only on this repository. Do not install it elsewhere or widen its
+  permissions "while we're at it" — a narrowly-scoped, single-repo App is what keeps a future key
+  leak's impact contained to this project alone.
+
+`SCORECARD_TOKEN` (an optional fine-grained PAT fallback for the same purpose, described in
+`scorecard.yml`) follows the same handling if it's ever set: it's a standing credential with no
+automatic expiry, so treat a suspected leak the same way — revoke it from GitHub's Personal
+access tokens settings and issue a replacement.
+
 ## Deployment requirements
 
 1. Run the service behind an HTTPS reverse proxy.

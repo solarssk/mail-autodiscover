@@ -526,6 +526,29 @@ jobs:
           format: cyclonedx
           output: sbom-arm64.cdx.json
 
+      # A distinct predicate type from the generic build provenance above --
+      # each SBOM attestation says "this exact CycloneDX document describes
+      # this image digest", signed the same keyless way. push-to-registry
+      # attaches both alongside the provenance attestation as separate OCI
+      # referrers on the same digest.
+      - name: Attest SBOM (linux/amd64)
+        id: attest-sbom-amd64
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6  # v4.2.2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.source.outputs.digest }}
+          sbom-path: sbom-amd64.cdx.json
+          push-to-registry: true
+
+      - name: Attest SBOM (linux/arm64)
+        id: attest-sbom-arm64
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6  # v4.2.2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.source.outputs.digest }}
+          sbom-path: sbom-arm64.cdx.json
+          push-to-registry: true
+
       # overwrite: true for the same reason as the digest artifacts in
       # `build` above -- a re-run of this job after the SBOM attach step
       # below fails shouldn't also fail here just because the SBOM from the
@@ -543,28 +566,33 @@ jobs:
       # bare `gh workflow run docker-publish.yml --ref vX.Y.Z`) where nothing
       # guarantees the release was created first.
       #
-      # The attestation bundle is renamed to a plain `.sigstore.json` name --
+      # Every attestation bundle is renamed to a plain `.sigstore.json` name --
       # one of the exact filename patterns OpenSSF Scorecard's Signed-Releases
       # check pattern-matches against Release assets (it only checks the
       # filename, not the signature itself). Not renamed to `.intoto.jsonl`
-      # to chase that check's higher score for that pattern: this bundle
-      # genuinely is a Sigstore bundle, not that format, and misnaming it
+      # to chase that check's higher score for that pattern: these bundles
+      # genuinely are Sigstore bundles, not that format, and misnaming them
       # would be gaming the check instead of fixing the actual gap.
-      - name: Attach SBOM and provenance attestation to the GitHub Release
+      - name: Attach SBOM and attestations to the GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BUNDLE_PATH: ${{ steps.attest.outputs.bundle-path }}
+          IMAGE_BUNDLE_PATH: ${{ steps.attest.outputs.bundle-path }}
+          SBOM_AMD64_BUNDLE_PATH: ${{ steps.attest-sbom-amd64.outputs.bundle-path }}
+          SBOM_ARM64_BUNDLE_PATH: ${{ steps.attest-sbom-arm64.outputs.bundle-path }}
         run: |
           set -euo pipefail
-          cp "$BUNDLE_PATH" image.sigstore.json
+          cp "$IMAGE_BUNDLE_PATH" image.sigstore.json
+          cp "$SBOM_AMD64_BUNDLE_PATH" sbom-amd64.sigstore.json
+          cp "$SBOM_ARM64_BUNDLE_PATH" sbom-arm64.sigstore.json
           TAG="${GITHUB_REF_NAME}"
           for _ in $(seq 1 30); do
             if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-              gh release upload "$TAG" sbom-amd64.cdx.json sbom-arm64.cdx.json image.sigstore.json \
+              gh release upload "$TAG" sbom-amd64.cdx.json sbom-arm64.cdx.json \
+                image.sigstore.json sbom-amd64.sigstore.json sbom-arm64.sigstore.json \
                 --clobber --repo "$GITHUB_REPOSITORY"
               exit 0
             fi
             sleep 10
           done
-          echo "::error::Release $TAG did not appear within 5 minutes; SBOM/attestation was not attached."
+          echo "::error::Release $TAG did not appear within 5 minutes; SBOM/attestations were not attached."
           exit 1

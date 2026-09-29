@@ -102,15 +102,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   published as an OCI referrer on GHCR and uploaded to the GitHub Release as
   `image.sigstore.json`, closing OpenSSF Scorecard's Signed-Releases finding. Verifiable with
   `gh attestation verify oci://ghcr.io/solarssk/mail-autodiscover@<digest>`.
+- Each platform's CycloneDX SBOM gets its own signed SBOM attestation too (same keyless
+  Sigstore mechanism, a distinct predicate type from the image provenance above), published to
+  GHCR and uploaded to the GitHub Release as `sbom-amd64.sigstore.json` /
+  `sbom-arm64.sigstore.json`.
 - `scorecard.yml` now feeds `ossf/scorecard-action` a token with read access to classic
   branch-protection settings, so its Branch-Protection check can actually run instead of
   erroring — the default `GITHUB_TOKEN` can't read them at all (`Administration` isn't a
-  grantable `GITHUB_TOKEN` permission). Prefers a short-lived GitHub App installation token
+  grantable `GITHUB_TOKEN` permission). Prefers a GitHub App installation token
   (`AUTOMATION_APP_ID`/`AUTOMATION_APP_PRIVATE_KEY` — a dedicated app for this repo only, not
-  shared with any other project, scoped to `Administration: Read-only` + `Contents: Read-only`
-  and nothing to rotate by hand) over a standing `SCORECARD_TOKEN`
-  fine-grained PAT, over the action's own `GITHUB_TOKEN` default — each tier is optional and
-  falls through to the next until one is configured.
+  shared with any other project, scoped to `Administration: Read-only` + `Contents: Read-only`)
+  over a standing `SCORECARD_TOKEN` fine-grained PAT, over the action's own `GITHUB_TOKEN`
+  default — each tier is optional and falls through to the next until one is configured. Each
+  minted installation token expires in about an hour, but the App's own private key does not:
+  it is a long-lived credential like any other and needs the same rotation/revocation handling
+  (see SECURITY.md).
 
 ## [0.4.0] - 2026-09-09
 
