@@ -117,11 +117,15 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           # Forces the Dockerfile's apt-get upgrade layer to actually re-run
           # instead of being served from the cache below indefinitely (see
-          # the Dockerfile's own CACHEBUST comment) -- the commit SHA is
-          # unique per build here, so every published image gets that day's
-          # Debian security patches regardless of how stale the pinned base
-          # image digest is.
-          build-args: CACHEBUST=${{ github.sha }}
+          # the Dockerfile's own CACHEBUST comment). run_id-run_attempt, not
+          # the commit SHA: this workflow also runs on workflow_dispatch (no
+          # new commit) and can be re-run on an existing run, both of which
+          # would keep github.sha identical to a previous build and let the
+          # shared GHA cache serve the same stale apt-get layer again --
+          # exactly the failure this exists to prevent. run_id is unique per
+          # dispatch and run_attempt increments on every re-run, so either
+          # case still forces a real apt-get upgrade.
+          build-args: CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}
           cache-from: type=gha,scope=${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
 

@@ -92,7 +92,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   surfaced as GitHub code-scanning alerts for OpenSSL CVEs that a real `apt-get upgrade` would
   have fixed. Moved the layer to run after `COPY`/`pip install` (so busting it doesn't also
   force those, correctly content-keyed, layers to redo) and added a `CACHEBUST` build arg set
-  to the commit SHA, forcing it to actually execute on every build. Verified: rebuilding with a
+  to `run_id-run_attempt` (not the commit SHA, which would stay identical across a
+  `workflow_dispatch` or re-run on an unchanged commit and let the cache serve the same stale
+  layer again), forcing it to actually execute on every build. Verified: rebuilding with a
   new `CACHEBUST` value did upgrade `openssl` (`3.0.20-1~deb12u2` → `3.0.22-1~deb12u1`),
   confirming the previously cached layer really was stale.
 

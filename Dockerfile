@@ -32,9 +32,12 @@ RUN pip install --no-cache-dir --upgrade "pip>=26.1.2" \
 # anything after the first build off a given digest (confirmed: every build
 # log showed this step as "CACHED", including ones weeks apart) while this
 # image kept shipping whatever OS packages existed at that one build. Passed
-# as a real build-arg (docker-publish.yml uses the commit SHA) rather than
-# left at its default so every published image gets that day's Debian
-# security patches regardless of how stale the pinned base digest is.
+# as a real build-arg (docker-publish.yml uses run_id-run_attempt, unique
+# per workflow run/retry -- not the commit SHA, which would stay identical
+# across a workflow_dispatch or re-run on an unchanged commit and let the
+# cache serve the same stale layer again) rather than left at its default,
+# so every published image gets that day's Debian security patches
+# regardless of how stale the pinned base digest is.
 # Placed as late as possible, after COPY/pip install, so busting it doesn't
 # also force those layers -- correctly keyed on actual file content -- to
 # redo on every build.
