@@ -86,6 +86,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   CI/build-time tooling (previously only runtime dependencies and third-party Actions were
   pinned) and making CodeQL analyze the exact versions actually shipped, not whatever
   currently satisfies `pyproject.toml`'s `>=` bounds.
+- The Docker image's `apt-get upgrade` layer was silently served from `docker-publish.yml`'s
+  build cache on every build after the first one off a given base-image digest (confirmed in
+  the build logs: always reported `CACHED`), so it stopped applying Debian security patches —
+  surfaced as GitHub code-scanning alerts for OpenSSL CVEs that a real `apt-get upgrade` would
+  have fixed. Moved the layer to run after `COPY`/`pip install` (so busting it doesn't also
+  force those, correctly content-keyed, layers to redo) and added a `CACHEBUST` build arg set
+  to the commit SHA, forcing it to actually execute on every build. Verified: rebuilding with a
+  new `CACHEBUST` value did upgrade `openssl` (`3.0.20-1~deb12u2` → `3.0.22-1~deb12u1`),
+  confirming the previously cached layer really was stale.
 
 ## [0.4.0] - 2026-09-09
 
