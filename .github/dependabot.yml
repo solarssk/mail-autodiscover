@@ -1,9 +1,15 @@
+# Every entry carries a cooldown: a version published minutes ago is the one
+# most likely to be a compromised release that gets pulled within days, so
+# Dependabot waits before proposing it. Security updates ignore the cooldown,
+# so a real fix is never delayed by it (zizmor: dependabot-cooldown).
 version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
     labels:
       - "dependencies"
       - "type: chore"
@@ -16,6 +22,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
     labels:
       - "dependencies"
       - "type: chore"
@@ -24,6 +32,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
     labels:
       - "dependencies"
       - "type: chore"
