@@ -25,12 +25,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   Issue templates, Dependabot PRs, and CONTRIBUTING.md follow the new names.
 - OpenSSF Scorecard badge in README's top badge row, added once `scorecard.yml` published its
   first real (non-error) result.
-- `.github/workflows/verify-standard.yml` now optionally passes a `PLAYBOOK_ADMIN_TOKEN`
-  secret through to `verify-tier`'s `admin_token` input, so its settings-level checks (branch
-  protection exists, required check names match a real job, delete-branch-on-merge, Dependabot
-  security-updates status) can actually run instead of being silently skipped for lack of an
-  admin-scoped token. Optional: those checks stay skipped-and-reported, not failed, until the
-  secret is added.
 - CI's own dev-tool installs are hash-pinned, the same way `requirements.txt` already is:
   `requirements-test.txt`, `requirements-lint.txt`, `requirements-typecheck.txt`,
   `requirements-security.txt`, one per extra each CI job installs from, verified against
