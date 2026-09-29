@@ -45,18 +45,21 @@ concurrency:
   group: release-${{ github.sha }}
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  actions: write
-  # Required by the Milestones API's PATCH endpoint (grouped under Issues,
-  # not Contents) -- without it, "Close matching GitHub milestone" 403s on
-  # every real release that has a matching open milestone.
-  issues: write
+# Deny-all at the top; the single job below grants what it needs itself
+# (same reasoning as codeql.yml and docker-publish.yml).
+permissions: {}
 
 jobs:
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+      # Required by the Milestones API's PATCH endpoint (grouped under Issues,
+      # not Contents) -- without it, "Close matching GitHub milestone" 403s on
+      # every real release that has a matching open milestone.
+      issues: write
 
     steps:
       - name: Check out repository
