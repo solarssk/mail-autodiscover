@@ -74,8 +74,12 @@ jobs:
       # instead of a bare `pip install ruff`, so CI and pre-commit can't drift
       # to different ruff versions -- a rule added upstream under an
       # already-selected prefix (e.g. "B") would otherwise start failing in
-      # one and not the other.
-      - run: pip install ".[lint]"
+      # one and not the other. Installed from the hash-pinned lockfile
+      # (requirements-lint.txt) rather than `pip install ".[lint]"` so a
+      # compromised or substituted package on the index fails the install
+      # instead of silently landing (see CONTRIBUTING.md's Dependencies
+      # section).
+      - run: pip install --require-hashes -r requirements-lint.txt
       - run: ruff check .
 
   test:
@@ -93,8 +97,9 @@ jobs:
       # Only what pytest itself needs (pytest, pytest-cov, httpx for
       # TestClient) -- mypy/bandit/ruff/etc. live in their own extras and
       # their own jobs now, so this required job isn't paying to install
-      # tools it never runs.
-      - run: pip install ".[test]"
+      # tools it never runs. Hash-pinned lockfile, same reasoning as the
+      # lint job above.
+      - run: pip install --require-hashes -r requirements-test.txt
       - run: pytest -v --junitxml=junit.xml
 
       # "Tests and coverage" is a required status check, but Codecov is a
@@ -147,7 +152,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install ".[test]"
+      - run: pip install --require-hashes -r requirements-test.txt
       # sonar-project.properties' sonar.python.xunit.reportPath=junit.xml
       # needs this job's own junit.xml -- this is a separate runner from the
       # "test" job, so its report isn't produced here just because the other
@@ -179,7 +184,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install ".[typecheck]"
+      - run: pip install --require-hashes -r requirements-typecheck.txt
       - run: mypy app
 
   security:
@@ -195,7 +200,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: python -m pip install --upgrade "pip>=26.1.2"
-      - run: pip install ".[security]"
+      - run: pip install --require-hashes -r requirements-security.txt
       - run: bandit -r app -ll -c pyproject.toml
       # Scoped to requirements.txt -- the exact hash-pinned runtime lockfile
       # that Dockerfile installs with --require-hashes -- instead of a bare
@@ -237,10 +242,16 @@ jobs:
       # satisfy pyproject.toml, so re-running it without --upgrade reproduces
       # the same file unless pyproject.toml's own constraints changed without
       # regenerating the lock to match.
-      - name: Verify requirements.txt matches pyproject.toml
+      - name: Verify requirements*.txt matches pyproject.toml
         run: |
+          set -euo pipefail
           pip-compile --generate-hashes --allow-unsafe -o requirements.txt pyproject.toml
-          git diff --exit-code requirements.txt
+          for extra in test lint typecheck security; do
+            pip-compile --extra "$extra" --generate-hashes --allow-unsafe \
+              -o "requirements-${extra}.txt" pyproject.toml
+          done
+          git diff --exit-code requirements.txt requirements-test.txt requirements-lint.txt \
+            requirements-typecheck.txt requirements-security.txt
 
   compat:
     name: Compatibility tests (Python 3.14)
@@ -260,7 +271,7 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-      - run: pip install ".[test]"
+      - run: pip install --require-hashes -r requirements-test.txt
       - run: pytest -q
 
   docker:

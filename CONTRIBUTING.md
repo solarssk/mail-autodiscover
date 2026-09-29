@@ -49,11 +49,31 @@ under 3.14 too):
 pip-compile --generate-hashes --allow-unsafe -o requirements.txt pyproject.toml
 ```
 
-CI fails the PR if `requirements.txt` doesn't match what regenerating it produces, so
-this can't be forgotten silently. Dev-only tools
-(`[project.optional-dependencies].dev`) are deliberately not locked: they never ship in
-the container, and locking them too would double the maintenance surface for little
-practical benefit.
+CI fails the PR if `requirements.txt` doesn't match what regenerating it produces, so this
+can't be forgotten silently.
+
+CI's own dev-tool installs (`test`, `lint`, `typecheck`, `security` — the extras each CI
+job installs from, per-job, so no job pays for tools it never runs) are hash-pinned the
+same way, in `requirements-test.txt`, `requirements-lint.txt`, `requirements-typecheck.txt`,
+and `requirements-security.txt`. This used to be considered not worth the extra maintenance
+surface, since these tools never ship in the container — but they still run with full
+access to CI secrets and the repository checkout, so an unpinned `pip install ruff` (or
+mypy, or bandit) is exactly the kind of unverified, untrusted-index install a supply-chain
+attack on PyPI would target; CI is as much a "build" step as the Docker image is.
+`[project.optional-dependencies].dev` itself (for local setup, below) stays unlocked — it's
+never installed by CI, only by a developer's own machine.
+
+Regenerate a dev-tool lockfile the same way, under Python 3.12 (this repo's
+`requires-python` floor, and what those CI jobs actually run on):
+
+```bash
+pip-compile --extra test --generate-hashes --allow-unsafe -o requirements-test.txt pyproject.toml
+```
+
+(swap `test` and the output filename for `lint`, `typecheck`, or `security` as needed). CI
+regenerates and diffs all five lockfiles in the same "Verify requirements*.txt matches
+pyproject.toml" job, so a forgotten regeneration fails the PR the same way it already did
+for `requirements.txt`.
 
 ## CI checks
 

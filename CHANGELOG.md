@@ -23,6 +23,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   settings, keeping every existing association; topic labels (`ci/cd`, `security`,
   `testing`, `dependencies`, `outlook`, `thunderbird`, `mail-server`) stay alongside them.
   Issue templates, Dependabot PRs, and CONTRIBUTING.md follow the new names.
+- OpenSSF Scorecard badge in README's top badge row, added once `scorecard.yml` published its
+  first real (non-error) result.
+- `.github/workflows/verify-standard.yml` now optionally passes a `PLAYBOOK_ADMIN_TOKEN`
+  secret through to `verify-tier`'s `admin_token` input, so its settings-level checks (branch
+  protection exists, required check names match a real job, delete-branch-on-merge, Dependabot
+  security-updates status) can actually run instead of being silently skipped for lack of an
+  admin-scoped token. Optional: those checks stay skipped-and-reported, not failed, until the
+  secret is added.
+- CI's own dev-tool installs are hash-pinned, the same way `requirements.txt` already is:
+  `requirements-test.txt`, `requirements-lint.txt`, `requirements-typecheck.txt`,
+  `requirements-security.txt`, one per extra each CI job installs from, verified against
+  `pyproject.toml` in the same job that already verifies `requirements.txt`.
 
 ### Changed
 
@@ -70,6 +82,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   the gitleaks scan-range step), and `docker-publish.yml` no longer grants
   `contents`/`packages`/`security-events: write` to all three of its jobs — deny-all at the
   top, each job gets only the scopes it uses. zizmor now runs in CI, so this stays fixed.
+- `codeql.yml`'s and `release.yml`'s `write` permissions moved from workflow level to their
+  (single) job, closing OpenSSF Scorecard's Token-Permissions finding: a workflow-level grant
+  applies to every job the file will ever have, not just the one it has today.
+- CI's dev-tool installs (ruff, mypy, bandit, pytest, pip-audit, deptry, httpx) now install
+  from the new hash-pinned lockfiles instead of a bare `pip install ".[extra]"`, and
+  `codeql.yml`'s Python analysis now installs from the hash-pinned `requirements.txt` instead
+  of a bare `pip install .` — closing OpenSSF Scorecard's Pinned-Dependencies gap for
+  CI/build-time tooling (previously only runtime dependencies and third-party Actions were
+  pinned) and making CodeQL analyze the exact versions actually shipped, not whatever
+  currently satisfies `pyproject.toml`'s `>=` bounds.
 
 ## [0.4.0] - 2026-09-09
 

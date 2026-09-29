@@ -15,3 +15,12 @@ permissions:
 jobs:
   verify:
     uses: solarssk/playbook/.github/workflows/verify-tier.yml@0f0760fd3cf1eecee43deb2debbaa5a295fc3a8a  # v0.2.0
+    # Optional: a PAT with repository administration access, for the
+    # settings-level checks (branch protection, delete-branch-on-merge,
+    # Dependabot security-updates status) that the default GITHUB_TOKEN
+    # can't read -- `administration` isn't a grantable GITHUB_TOKEN
+    # permission. Skipped and reported as skipped, not failed, if the
+    # PLAYBOOK_ADMIN_TOKEN secret doesn't exist yet. See
+    # solarssk/playbook/docs/ci-cookbook.md #12.
+    secrets:
+      admin_token: ${{ secrets.PLAYBOOK_ADMIN_TOKEN }}

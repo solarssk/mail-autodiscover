@@ -134,3 +134,11 @@ broken release — fix the CHANGELOG entry and push again.
   dev-tooling version — `pip-compile` resolves marker-conditional dependencies using
   whatever interpreter runs it): `pip-compile --generate-hashes --allow-unsafe -o
   requirements.txt pyproject.toml`. CI fails if the two drift apart.
+- **CI's own dev-tool installs are hash-pinned too** (`requirements-test.txt`,
+  `requirements-lint.txt`, `requirements-typecheck.txt`, `requirements-security.txt`, one
+  per extra each CI job installs from). If you change `test`/`lint`/`typecheck`/`security`
+  in `[project.optional-dependencies]`, regenerate the matching file under Python 3.12
+  (this repo's floor, and what those CI jobs run on): `pip-compile --extra test
+  --generate-hashes --allow-unsafe -o requirements-test.txt pyproject.toml` (swap the extra
+  name and output file). CI regenerates and diffs all five lockfiles in one job. The `dev`
+  extra itself (local setup only, never installed by CI) stays unlocked.

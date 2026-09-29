@@ -45,6 +45,17 @@ echo "==> requirements.txt (pip-compile drift check)"
 "$PIP_COMPILE" --generate-hashes --allow-unsafe -o requirements.txt pyproject.toml
 git diff --exit-code requirements.txt
 
+echo "==> requirements-*.txt (dev-tool pip-compile drift check)"
+# CI regenerates these under Python 3.12 specifically (this repo's requires-python
+# floor, and what those CI jobs run on) -- same caveat as requirements.txt above if
+# your local .venv is a different Python version.
+for extra in test lint typecheck security; do
+  "$PIP_COMPILE" --extra "$extra" --generate-hashes --allow-unsafe \
+    -o "requirements-${extra}.txt" pyproject.toml
+done
+git diff --exit-code requirements-test.txt requirements-lint.txt requirements-typecheck.txt \
+  requirements-security.txt
+
 if [[ "${SKIP_PIP_AUDIT:-}" != "1" ]]; then
   echo "==> pip-audit"
   # Scoped to requirements.txt (the exact runtime lockfile Dockerfile installs
