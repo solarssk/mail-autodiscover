@@ -117,9 +117,10 @@ Don't rely on domain membership being hidden. If that matters for your deploymen
 | CycloneDX SBOM | Software bill of materials for the published image | Version tags, attached to the GitHub Release | `.github/workflows/docker-publish.yml` |
 | Docker Hub publish | Registry-to-registry copy of the exact, already-scanned GHCR manifest by digest — never a separate build, so the same scan results apply to both registries | Push to `main` and version tags | `.github/workflows/docker-publish.yml` |
 | Dependabot | Dependency and GitHub Actions update PRs | Weekly | `.github/dependabot.yml` |
-| Documentation-impact check | PR's declared doc-update checkbox verified against the actual diff | Every non-Dependabot PR | `.github/workflows/ci.yml` (`docs-impact`) |
+| Documentation-impact check | PR's declared doc-update checkbox verified against the actual diff; exempts a PR only when its *author* is `dependabot[bot]`, never by branch name | Every PR authored by anyone but Dependabot, and re-run when its description is edited | `.github/workflows/docs-impact.yml` |
 | Codecov | Coverage report and patch-coverage signal (not yet a merge gate) | Every push and PR | `.github/workflows/ci.yml` (`test`) |
 | SonarCloud | Static analysis, code smells, and security rating (own job, not a merge gate) | Every push and PR | `.github/workflows/ci.yml` (`sonarcloud`) |
+| OpenSSF Scorecard | Independent, report-only score of controls this repo already claims (branch protection, pinned dependencies, token permissions, SAST, security policy) — not a merge gate | Push to `main`, branch-protection changes, and weekly | `.github/workflows/scorecard.yml` |
 | Verify standard | Mechanical check against the `solarssk/playbook` Tier 2 checklist (SHA-pinning, `SECURITY.md`, issue templates, `concurrency:` blocks, and more) | Every push and PR | `.github/workflows/verify-standard.yml` |
 
 This table is a claim you can check directly: open the named workflow file and confirm the

@@ -1,0 +1,42 @@
+name: Documentation impact
+
+# Verifies a PR's "Documentation impact" declaration against its actual diff
+# (scripts/check_pr_docs_impact.py) instead of trusting it on its word.
+#
+# This is its own workflow, not a job in ci.yml, because of the `edited`
+# trigger. The declaration lives in the pull request description, and a plain
+# `pull_request` trigger only fires on opened, synchronize, and reopened -- so
+# someone who corrects the checkbox would keep seeing a failing check until
+# they pushed another commit, and the script would keep reading the stale
+# description from the event payload of that earlier push. Adding `edited` to
+# ci.yml's own trigger would instead re-run every other CI job on every
+# description edit.
+#
+# The job keeps the name "Documentation impact declaration": that exact name
+# is a required status check on `main`, and a required check whose name no job
+# reports blocks every PR with no error.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  docs-impact:
+    name: Documentation impact declaration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # fetch-depth: 0 because the script diffs the PR's base and head commits.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check documentation-impact declaration
+        run: python3 scripts/check_pr_docs_impact.py
