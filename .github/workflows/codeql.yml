@@ -15,15 +15,20 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'schedule' && 'scheduled' || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
-permissions:
-  contents: read
-  security-events: write
+# Deny-all at the top; the single job below grants what it needs itself.
+# A workflow-level grant applies to every job the file will ever have, not
+# just this one -- OpenSSF Scorecard's Token-Permissions check flags that as
+# excessive regardless of how many jobs currently exist.
+permissions: {}
 
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
     strategy:
       fail-fast: false
       matrix:
