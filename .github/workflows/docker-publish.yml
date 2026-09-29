@@ -308,6 +308,12 @@ jobs:
       # (same digest, same scan results -- nothing rebuilt), with tags
       # derived by swapping the registry host only; the image path
       # (owner/repo) is identical in both registries.
+      #
+      # Deliberately excludes the sha-<short> tag GHCR carries: nothing in
+      # this workflow ever reads it back from Docker Hub (the `promote` job
+      # below only ever polls it on GHCR, via $REGISTRY), so mirroring it
+      # here was pure clutter on the one registry a human is actually likely
+      # to browse -- one new tag per merge to main, forever, with no reader.
       - name: Copy manifest to Docker Hub
         env:
           TAGS: ${{ steps.meta.outputs.tags }}
@@ -316,8 +322,16 @@ jobs:
           set -euo pipefail
           tag_args=()
           while IFS= read -r tag; do
+            case "$tag" in
+              *:sha-*) continue ;;
+            esac
             [ -n "$tag" ] && tag_args+=(--tag "${tag/ghcr.io/docker.io}")
           done <<< "$TAGS"
+          if [ "${#tag_args[@]}" -eq 0 ]; then
+            echo "No latest/version tag to copy to Docker Hub for this run (a newer commit's" \
+                 "build is racing this one, see the 'latest' skip above) -- skipping."
+            exit 0
+          fi
           docker buildx imagetools create "${tag_args[@]}" \
             "${REGISTRY}/${IMAGE_NAME}@${MANIFEST_DIGEST}"
 

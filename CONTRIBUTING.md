@@ -92,9 +92,12 @@ for `requirements.txt`.
 
 `docker-publish.yml` only ever builds from source on a push to `main`: each platform
 (`linux/amd64`, `linux/arm64`) builds and scans in parallel, gated on fixable HIGH/CRITICAL,
-before the real `latest`/`sha-<short>` tags are created from the two already-scanned
-digests and published to GHCR, then copied by digest to Docker Hub — never rebuilt, so both
-registries carry the exact same scanned image. A version tag never triggers a second build:
+before the real `latest`/`sha-<short>` tags are created from the two already-scanned digests
+and published to GHCR. Only `latest` is then copied by digest to Docker Hub — `sha-<short>`
+stays GHCR-only, since nothing ever reads it back from Docker Hub and it would otherwise just
+accumulate there, one new tag per merge, with no reader. Both registries still carry the exact
+same scanned image; nothing is rebuilt for the Docker Hub copy. A version tag never triggers a
+second build:
 it promotes the digest main already published for that same commit straight to the version
 tag (in both registries), and generates the CycloneDX SBOM attached to the GitHub Release
 from that same digest. See [SECURITY.md](SECURITY.md#security-controls--ci) for the full
