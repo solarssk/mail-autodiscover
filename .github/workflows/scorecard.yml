@@ -48,19 +48,28 @@ jobs:
       # A GitHub App installation token, minted fresh per run with only
       # read-only Administration and read-only Contents, is preferred over a
       # standing PAT: it expires in about an hour, so there is nothing
-      # long-lived to leak or rotate by hand.
+      # long-lived to leak or rotate by hand. AUTOMATION_APP_* is this repo's
+      # own dedicated App (Administration: Read-only, Contents: Read-only,
+      # nothing else, installed only here) -- not shared with any other
+      # repository, so a leaked key's blast radius stays scoped to this one
+      # project. Named for the repo, not the one thing it happens to be used
+      # for today, so a later, genuinely new narrowly-scoped need in this
+      # repo can reuse it instead of spawning another App; its permission set
+      # stays whatever the current uses actually need, expanded later (with
+      # GitHub re-prompting for approval) only when a real one shows up, not
+      # provisioned ahead of time.
       #
       # `secrets` isn't a valid context inside a step's `if:` (actionlint
       # catches this), so presence is checked here via `env:` (where secrets
       # ARE allowed) instead, and the next step's `if:` reads this step's
       # output -- `steps` is a valid `if:` context.
-      - name: Check for release app credentials
+      - name: Check for automation app credentials
         id: app-check
         env:
-          RELEASE_APP_ID: ${{ secrets.RELEASE_APP_ID }}
-          RELEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          AUTOMATION_APP_ID: ${{ secrets.AUTOMATION_APP_ID }}
+          AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
         run: |
-          if [ -n "$RELEASE_APP_ID" ] && [ -n "$RELEASE_APP_PRIVATE_KEY" ]; then
+          if [ -n "$AUTOMATION_APP_ID" ] && [ -n "$AUTOMATION_APP_PRIVATE_KEY" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
@@ -72,8 +81,8 @@ jobs:
         if: steps.app-check.outputs.configured == 'true'
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
         with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
           permission-administration: read
           permission-contents: read
 

@@ -106,8 +106,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   branch-protection settings, so its Branch-Protection check can actually run instead of
   erroring — the default `GITHUB_TOKEN` can't read them at all (`Administration` isn't a
   grantable `GITHUB_TOKEN` permission). Prefers a short-lived GitHub App installation token
-  (`RELEASE_APP_ID`/`RELEASE_APP_PRIVATE_KEY`, `Administration: Read-only` +
-  `Contents: Read-only`, nothing to rotate by hand) over a standing `SCORECARD_TOKEN`
+  (`AUTOMATION_APP_ID`/`AUTOMATION_APP_PRIVATE_KEY` — a dedicated app for this repo only, not
+  shared with any other project, scoped to `Administration: Read-only` + `Contents: Read-only`
+  and nothing to rotate by hand) over a standing `SCORECARD_TOKEN`
   fine-grained PAT, over the action's own `GITHUB_TOKEN` default — each tier is optional and
   falls through to the next until one is configured.
 
