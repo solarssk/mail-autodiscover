@@ -6,6 +6,71 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+
+- `.github/workflows/lint-workflows.yml` (replaces `actionlint.yml`): lints workflows with
+  **both** actionlint (correctness) and zizmor (safety: template injection, excessive
+  permissions, unpinned actions, missing Dependabot cooldown), which playbook v0.2.0 makes a
+  Tier 2 requirement together. Runs only when `.github/workflows/**` or `dependabot.yml`
+  change.
+- `.github/workflows/scorecard.yml`: OpenSSF Scorecard, report-only, on push to `main`,
+  branch-protection changes, and weekly — an independent check of controls this repo already
+  claims. Never gates a merge.
+- `.github/workflows/docs-impact.yml`: the documentation-impact check as its own workflow (see
+  Changed), with `tests/test_check_pr_docs_impact.py` covering the script that had none.
+- The playbook's standard `type:` labels (`type: bug`, `type: feature`, `type: docs`,
+  `type: chore`). The four existing labels that map one-to-one were renamed in the repository
+  settings, keeping every existing association; topic labels (`ci/cd`, `security`,
+  `testing`, `dependencies`, `outlook`, `thunderbird`, `mail-server`) stay alongside them.
+  Issue templates, Dependabot PRs, and CONTRIBUTING.md follow the new names.
+
+### Changed
+
+- Pinned `solarssk/playbook`'s `verify-tier` to **v0.2.0** (was v0.1.1, overdue — the
+  "pinned to the latest release" check was itself only added in v0.2.0, so the old pin could
+  not warn that it was stale).
+- The documentation-impact check now runs on `edited` too. The declaration lives in the PR
+  description, and a plain `pull_request` trigger only fires on opened / synchronize /
+  reopened, so correcting the checkbox left the old failing result in place until another
+  commit was pushed. It is its own workflow rather than an `edited` trigger on `ci.yml`,
+  which would re-run every other job on every description edit. It also now exempts a PR
+  only when its **author** is `dependabot[bot]`, no longer by branch name (anyone can open a
+  PR from a branch called `dependabot/...`).
+- Every Dependabot entry has `cooldown: default-days: 7` (a version published minutes ago is
+  the most likely to be a compromised release; security updates ignore it) and adds
+  `type: chore` next to `dependencies`. `github-actions` updates are grouped into one PR, and
+  `pydantic-core` is ignored as a standalone bump: it is a transitive pin that Dependabot
+  raised without checking pydantic's own constraint, which breaks `--require-hashes`
+  installs.
+- `docker-publish.yml` has a workflow-level `concurrency:` group keyed on ref **and**
+  commit, alongside its per-job groups. It only serializes truly identical runs, so it cannot
+  evict a release commit's build the way a per-ref group could.
+
+### Fixed
+
+- `release.yml` could not release a version that had no tag yet — i.e. every new release. Its
+  "tag already exists at a different commit?" check read `gh api`'s output, and `gh api`
+  writes the error body to stdout even on failure, so a nonexistent tag's 422 JSON ended up in
+  the "existing SHA" variable and was mistaken for a conflict. This blocked the real 0.4.0
+  release, which had to be completed by hand. The check now reads the response itself and only
+  accepts the exact "no such ref" shape (HTTP 422, "No commit found for SHA:"); any other
+  outcome — a transient 5xx, a rate limit, an empty body — fails the job instead of guessing,
+  since `gh release create` only honors `--target` for a tag that does not already exist.
+- Releases created by `release.yml` had no explicit title, so GitHub displayed the merge
+  commit's message ("Merge pull request #58 from ...") instead of the version. They now use
+  the tag (`v0.4.0`), like every earlier release.
+- `requirements.txt` regenerated to resolve a `pydantic-core` conflict that broke
+  `--require-hashes` installs.
+
+### Security
+
+- Hardened every workflow against template injection and excessive permissions, findings
+  zizmor reported that neither actionlint nor CodeQL had caught (26 in total): `${{ }}`
+  expanded straight into `run:` scripts now goes through `env:` (the high-severity one was
+  the gitleaks scan-range step), and `docker-publish.yml` no longer grants
+  `contents`/`packages`/`security-events: write` to all three of its jobs — deny-all at the
+  top, each job gets only the scopes it uses. zizmor now runs in CI, so this stays fixed.
+
 ## [0.4.0] - 2026-09-09
 
 ### What's new
