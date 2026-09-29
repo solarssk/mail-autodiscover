@@ -60,7 +60,7 @@ practical benefit.
 | Check | What it does |
 |-------|----------------|
 | Secret scan (gitleaks) | Scans this run's own commit range for leaked secrets |
-| Documentation impact declaration | Verifies the PR's "Documentation impact" checkbox against the actual diff (skipped for Dependabot PRs) |
+| Documentation impact declaration | Verifies the PR's "Documentation impact" checkbox against the actual diff (skipped for PRs authored by Dependabot); its own workflow, so it re-runs when you edit the PR description |
 | Lint (ruff) | Python style and lint |
 | Tests and coverage | `pytest` with ≥90% coverage on `app/`; also uploads to Codecov (report-only, not a merge gate) |
 | Compatibility tests (Python 3.14) | Re-runs the suite on the Dockerfile's actual runtime Python version, not just the 3.12 floor used elsewhere |
