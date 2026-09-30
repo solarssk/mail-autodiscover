@@ -9,19 +9,31 @@
   &nbsp;
   <a href="https://sonarcloud.io/summary/new_code?id=solarssk_mail-autodiscover"><img src="https://sonarcloud.io/api/project_badges/measure?project=solarssk_mail-autodiscover&metric=alert_status" alt="SonarCloud Quality Gate"></a>
   &nbsp;
+  <a href="https://www.bestpractices.dev/projects/15103"><img src="https://www.bestpractices.dev/projects/15103/badge" alt="OpenSSF Best Practices"></a>
+  &nbsp;
   <a href="https://securityscorecards.dev/viewer/?uri=github.com/solarssk/mail-autodiscover"><img src="https://api.securityscorecards.dev/projects/github.com/solarssk/mail-autodiscover/badge" alt="OpenSSF Scorecard"></a>
-  &nbsp;
-  <a href="https://github.com/solarssk/mail-autodiscover/releases/latest"><img src="https://img.shields.io/github/v/release/solarssk/mail-autodiscover" alt="Latest release"></a>
-  &nbsp;
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/solarssk/mail-autodiscover" alt="License: MIT"></a>
 </p>
 
 <p align="center">
+  <a href="https://github.com/solarssk/mail-autodiscover/releases/latest"><img src="https://img.shields.io/github/v/release/solarssk/mail-autodiscover" alt="Latest release"></a>
+  &nbsp;
   <a href="https://github.com/solarssk/mail-autodiscover/pkgs/container/mail-autodiscover"><img src="https://img.shields.io/badge/GHCR-solarssk%2Fmail--autodiscover-2496ED?logo=docker&logoColor=white" alt="GHCR: solarssk/mail-autodiscover"></a>
   &nbsp;
   <a href="https://hub.docker.com/r/solarssk/mail-autodiscover"><img src="https://img.shields.io/badge/Docker%20Hub-solarssk%2Fmail--autodiscover-2496ED?logo=docker&logoColor=white" alt="Docker Hub: solarssk/mail-autodiscover"></a>
   &nbsp;
   <img src="https://img.shields.io/badge/platforms-amd64%20%7C%20arm64-blue" alt="Platforms: amd64, arm64">
+  &nbsp;
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/solarssk/mail-autodiscover" alt="License: MIT"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white" alt="Python 3.12+">
+  &nbsp;
+  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  &nbsp;
+  <img src="https://img.shields.io/badge/Pydantic-2-E92063?logo=pydantic&logoColor=white" alt="Pydantic 2">
+  &nbsp;
+  <img src="https://img.shields.io/badge/Uvicorn-blue" alt="Uvicorn">
 </p>
 
 <p align="center">
