@@ -136,12 +136,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### What this means
 
-- `CLAUDE.md` and `AGENTS.md` give AI coding assistants (Claude Code, OpenAI Codex, and others)
-  a concise map of the project: architecture, commands, security invariants, and release process.
-  This avoids agents having to re-derive project conventions from scratch on each session.
+- `CLAUDE.md` and `AGENTS.md` give AI coding assistants (Claude Code, OpenAI Codex, and others) a concise map of the project: architecture, commands, security invariants, and release process. This avoids agents having to re-derive project conventions from scratch on each session.
 - CHANGELOG version links now point to the correct diff range for each release.
-- `CONTRIBUTING.md` correctly references the `docs/` directory instead of the GitHub Wiki,
-  which was superseded in `0.3.0`.
+- `CONTRIBUTING.md` correctly references the `docs/` directory instead of the GitHub Wiki, which was superseded in `0.3.0`.
 - `pyproject.toml` project description now includes Apple Mail, which has been supported since `0.2.0`.
 
 ### Action required
