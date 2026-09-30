@@ -9,6 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Added
 
 - `docs/endpoints.md`: endpoint reference with request and response formats, every status code and the setting behind it, and a worked Outlook POST example. README now says where to open a bug report or feature request.
+- OpenSSF Best Practices badge (passing level, [project 15103](https://www.bestpractices.dev/projects/15103)) in README. The badge rows are regrouped: quality and security checks in the first row, release, registries, platforms and license in the second.
 
 ## [0.4.1] - 2026-09-30
 
