@@ -6,6 +6,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+
+- `docs/endpoints.md`: endpoint reference with request and response formats, every status code and the setting behind it, and a worked Outlook POST example. README now says where to open a bug report or feature request.
+
 ## [0.4.1] - 2026-09-30
 
 ### What's new
