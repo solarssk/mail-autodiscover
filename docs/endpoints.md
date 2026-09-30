@@ -17,9 +17,9 @@ The service is stateless and never checks whether a mailbox exists (see [SECURIT
 | `GET` | `/mail/config-v1.1.xml`<br>`/.well-known/autoconfig/mail/config-v1.1.xml` | query `emailaddress` | `200`, `application/xml`: Thunderbird `clientConfig` 1.1 |
 | `GET` | `/mail/ios.mobileconfig`<br>`/.well-known/apple-mail.mobileconfig` | query `emailaddress` | `200`, `application/x-apple-aspen-config`, sent as an attachment named `mail-autodiscover-<domain>.mobileconfig` |
 | `POST` | `/autodiscover/autodiscover.xml` | XML body containing an `EMailAddress` element | `200`, `application/xml`: Outlook Autodiscover response |
-| `GET` | `/autodiscover/autodiscover.xml` | none | `200`, `application/xml`: neutral Outlook error (`Code="600"`), the same for everyone |
+| `GET` | `/autodiscover/autodiscover.xml` | none | `200`, `application/xml`: neutral Outlook error (`Code="600"`), the same for everyone, also when `OUTLOOK_ENABLED=false` |
 
-The two Thunderbird paths and the two Apple Mail paths are aliases and answer identically. Every response carries an `X-Request-ID` header and the security headers described in [SECURITY.md](../SECURITY.md).
+The two Thunderbird paths and the two Apple Mail paths are aliases and answer identically. Every response carries an `X-Request-ID` header. It also carries the security headers described in [SECURITY.md](../SECURITY.md) unless you set `SECURITY_HEADERS_ENABLED=false` (they are on by default).
 
 ## Status Codes
 
@@ -30,11 +30,11 @@ Error bodies are always JSON, `{"detail": "..."}`.
 | `200` | none (XML, profile or JSON as above) | Address is in an allowed domain and the protocol is enabled |
 | `400` | `Invalid request` | Thunderbird / Apple Mail: `emailaddress` missing or empty. Outlook: body is not parseable XML, has no `EMailAddress`, or the address is not syntactically valid |
 | `400` | `Configuration not available` | Where the table below would return `404 Not found` for an unknown domain (or a malformed address on a Thunderbird / Apple Mail route), but `RETURN_404_FOR_UNKNOWN_DOMAIN=false` is set |
-| `404` | `Not found` | Address is not in an allowed domain (default), a malformed address on a Thunderbird / Apple Mail route, or the protocol is switched off with `OUTLOOK_ENABLED`, `THUNDERBIRD_ENABLED` or `APPLE_MOBILECONFIG_ENABLED` set to `false` |
+| `404` | `Not found` | Address is not in an allowed domain (default), a malformed address on a Thunderbird / Apple Mail route, or the protocol is switched off: `THUNDERBIRD_ENABLED=false` or `APPLE_MOBILECONFIG_ENABLED=false` for their routes, `OUTLOOK_ENABLED=false` for `POST /autodiscover/autodiscover.xml` only |
 | `404` | `Not Found` | Any path that is not listed above |
 | `405` | `Method Not Allowed` | A listed path used with the wrong HTTP method |
 | `413` | `Request entity too large` | Outlook `POST` body is larger than `MAX_REQUEST_BODY_BYTES` (default `16384`) |
-| `429` | `Too many requests` | More than `RATE_LIMIT_PER_MINUTE` (default `60`) requests in a minute from one client IP; `/health` and `/ready` are exempt. The counter is per uvicorn worker, not shared |
+| `429` | `Too many requests` | Rate limiting is on (`RATE_LIMIT_ENABLED`, default `true`) and a client IP sent more than `RATE_LIMIT_PER_MINUTE` (default `60`) requests in a minute; `/health` and `/ready` are exempt. The counter is per uvicorn worker, not shared |
 
 ## Outlook Autodiscover Example
 
