@@ -26,7 +26,7 @@ curl -i "https://autoconfig.example.com/mail/config-v1.1.xml?emailaddress=user@e
 curl -i "https://autodiscover.example.com/mail/ios.mobileconfig?emailaddress=user@example.com"
 ```
 
-For Outlook, send a real client request or a POST body similar to the test suite.
+For Outlook, send a real client request or use the `curl` example in [endpoints.md](endpoints.md#outlook-autodiscover-example).
 
 ## Proxy Header Contract
 

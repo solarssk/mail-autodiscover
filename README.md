@@ -181,6 +181,8 @@ Prefer pinned tags or digests in production.
 | `POST` | `/autodiscover/autodiscover.xml` | Outlook Autodiscover |
 | `GET` | `/autodiscover/autodiscover.xml` | Neutral Outlook response |
 
+Status codes, request and response formats, and an Outlook example are in [docs/endpoints.md](docs/endpoints.md).
+
 ## Apple Mail notes
 
 - Profiles are unsigned by default.
@@ -211,6 +213,7 @@ See [SECURITY.md](SECURITY.md) for the full trust model and how to report a vuln
 | Doc | Covers |
 |-----|--------|
 | 🌐 [docs/dns.md](docs/dns.md) | Reverse proxy and DNS setup |
+| 🔌 [docs/endpoints.md](docs/endpoints.md) | Endpoint reference: routes, status codes, examples |
 | 🧭 [docs/reverse-proxy/nginx.md](docs/reverse-proxy/nginx.md) | Nginx |
 | 🧭 [docs/reverse-proxy/caddy.md](docs/reverse-proxy/caddy.md) | Caddy |
 | 🧭 [docs/reverse-proxy/nginx-proxy-manager.md](docs/reverse-proxy/nginx-proxy-manager.md) | Nginx Proxy Manager |
@@ -248,6 +251,8 @@ Run the same Python checks as GitHub CI:
 `pre-commit install` also runs `ruff`, `mypy`, and `pytest` automatically before each commit.
 
 ## Contributing
+
+Found a bug or want a feature? [Open an issue](https://github.com/solarssk/mail-autodiscover/issues/new/choose) using the bug report or feature request form. For a security vulnerability, do not open a public issue; use the private advisory link in [SECURITY.md](SECURITY.md).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and release process.
 
