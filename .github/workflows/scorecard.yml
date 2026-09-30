@@ -83,9 +83,18 @@ jobs:
           fi
 
       # Skipped (not failed) when the app secrets don't exist yet.
+      # continue-on-error is the other half of that same fail-open intent:
+      # without it, a real run proved this step failing HARD blocks the
+      # whole job (the App's actual installation was missing one of the two
+      # requested permissions -- "The permissions requested are not granted
+      # to this installation") and Scorecard never ran at all, which is
+      # worse than falling back to a lower tier. A failed step's output is
+      # empty, same as a skipped one, so the `||` chain below still falls
+      # through correctly either way.
       - name: Mint Scorecard read token
         id: app-token
         if: steps.app-check.outputs.configured == 'true'
+        continue-on-error: true
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
         with:
           app-id: ${{ secrets.AUTOMATION_APP_ID }}
