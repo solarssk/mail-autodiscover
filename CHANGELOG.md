@@ -6,6 +6,36 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-30
+
+### What's new
+
+- Supply-chain security hardened end to end: CI's own dev-tool installs (ruff, mypy, bandit,
+  pytest, and friends) are now hash-pinned the same way runtime dependencies already were,
+  published container images and each platform's SBOM carry a cryptographically verifiable
+  Sigstore signature, and a Docker layer-caching bug that had silently stopped applying Debian
+  security patches for weeks is fixed.
+- OpenSSF Scorecard now runs against this repository and is shown as a README badge — an
+  independent, public check of the controls this repo already claims.
+- Full `solarssk/playbook` Tier 2 compliance re-verified end to end, including workflow
+  linting (actionlint + zizmor), Dependabot cooldowns, and the standard `type:` label taxonomy.
+- Docker Hub's tag list no longer accumulates a new `sha-<short>` tag on every merge to
+  `main` — only `latest` and version tags are published there now.
+
+### What this means
+
+- No change to the deployed service's behavior, configuration, or API — every change in this
+  release is CI/CD, build-pipeline, and documentation.
+- Starting with this release, verify what you're running:
+  `gh attestation verify oci://ghcr.io/solarssk/mail-autodiscover@<digest> --repo
+  solarssk/mail-autodiscover`.
+- If you'd pinned a Docker Hub `sha-<short>` tag from a previous build, note those are no
+  longer published there — GHCR still carries them, or pin a version tag/digest instead.
+
+### Action required
+
+- No action required.
+
 ### Added
 
 - `.github/workflows/lint-workflows.yml` (replaces `actionlint.yml`): lints workflows with
@@ -51,6 +81,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `docker-publish.yml` has a workflow-level `concurrency:` group keyed on ref **and**
   commit, alongside its per-job groups. It only serializes truly identical runs, so it cannot
   evict a release commit's build the way a per-ref group could.
+- Docker Hub no longer receives the `sha-<short>` tag on every merge to `main` — only
+  `latest` is copied there now. Nothing in this workflow ever reads that tag back from Docker
+  Hub (the `promote` job's own polling only ever checks it on GHCR), so it was pure
+  accumulating clutter on the one registry a human is actually likely to browse. GHCR keeps
+  both tags exactly as before.
 
 ### Fixed
 
@@ -619,7 +654,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.1...v0.3.2
