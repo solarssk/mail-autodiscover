@@ -140,5 +140,17 @@ broken release — fix the CHANGELOG entry and push again.
   in `[project.optional-dependencies]`, regenerate the matching file under Python 3.12
   (this repo's floor, and what those CI jobs run on): `pip-compile --extra test
   --generate-hashes --allow-unsafe -o requirements-test.txt pyproject.toml` (swap the extra
-  name and output file). CI regenerates and diffs all five lockfiles in one job. The `dev`
-  extra itself (local setup only, never installed by CI) stays unlocked.
+  name and output file). CI regenerates and diffs `requirements.txt` and the four dev-tool
+  lockfiles in two separate jobs (different interpreters, see above). The `dev` extra itself
+  (local setup only, never installed by CI) stays unlocked.
+- **The Dockerfile's `apt-get upgrade` step must stay after `COPY`/`pip install`, with its
+  `ARG CACHEBUST`** — moving it earlier (or dropping the ARG) silently brings back a real bug
+  that shipped for a while undetected: Docker's build cache keys that layer only on its
+  command text and the base image's own pinned digest, so without a per-build cache-buster it
+  gets served from `docker-publish.yml`'s `cache-from: type=gha` forever after the first build
+  off a given digest — the image then stops receiving Debian security patches even though the
+  workflow appears to build normally every time (confirmed: `apt-get upgrade` showed `CACHED`
+  in every build log for weeks, and a forced rebuild found a real pending OpenSSL update).
+  `docker-publish.yml` passes `CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}`, not
+  the commit SHA — a `workflow_dispatch` on an unchanged `main`, or a re-run of an existing
+  run, would otherwise keep the same SHA and hit the same stale cache again.
