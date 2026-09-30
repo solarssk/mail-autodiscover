@@ -94,7 +94,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      # Only what pytest itself needs (pytest, pytest-cov, httpx for
+      # Only what pytest itself needs (pytest, pytest-cov, httpx2 for
       # TestClient) -- mypy/bandit/ruff/etc. live in their own extras and
       # their own jobs now, so this required job isn't paying to install
       # tools it never runs. Hash-pinned lockfile, same reasoning as the
