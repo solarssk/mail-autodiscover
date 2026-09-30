@@ -23,7 +23,7 @@ dependencies = [
 # self-referencing extra below (verified pip resolves this correctly).
 [project.optional-dependencies]
 test = [
-    "httpx>=0.28.0",
+    "httpx2>=2.0.0",
     "pytest>=8.3.0",
     "pytest-cov>=6.0.0",
 ]
@@ -69,15 +69,12 @@ warn_unused_configs = true
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "--cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
-# Narrowly scoped, not a blanket "ignore::DeprecationWarning": that used to
-# silence any DeprecationWarning repo-wide, including ones from our own code.
-# The only DeprecationWarning currently raised in this suite comes from
-# starlette.testclient importing the deprecated `anyio.abc.BlockingPortal`
-# alias (starlette/testclient.py:53) -- a third-party issue, fixed upstream
-# once Starlette updates the import, not something this repo can act on.
-filterwarnings = [
-    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
-]
+# Every warning fails the run, so a new deprecation from a dependency shows up
+# in CI (and on the Dependabot PR that brings it) instead of scrolling past. If
+# one truly can't be fixed here, add a narrowly scoped
+# "ignore:<message>:<Category>" entry *after* "error" (later entries win), with a
+# comment naming the upstream issue -- never a blanket ignore.
+filterwarnings = ["error"]
 
 [tool.coverage.run]
 branch = true
@@ -105,7 +102,7 @@ DEP002 = [
     "mail-autodiscover",
     "bandit",
     "deptry",
-    "httpx",
+    "httpx2",
     "mypy",
     "pip-audit",
     "pip-tools",
