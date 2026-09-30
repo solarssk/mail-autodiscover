@@ -71,9 +71,9 @@ pip-compile --extra test --generate-hashes --allow-unsafe -o requirements-test.t
 ```
 
 (swap `test` and the output filename for `lint`, `typecheck`, or `security` as needed). CI
-regenerates and diffs all five lockfiles in the same "Verify requirements*.txt matches
-pyproject.toml" job, so a forgotten regeneration fails the PR the same way it already did
-for `requirements.txt`.
+regenerates and diffs `requirements.txt` (Python 3.14) and the four dev-tool lockfiles
+(Python 3.12) in two separate jobs — not one, since each set needs the interpreter it was
+actually compiled under — so a forgotten regeneration still fails the PR either way.
 
 ## CI checks
 
@@ -87,6 +87,8 @@ for `requirements.txt`.
 | SonarCloud analysis | Separate, non-required job — kept off the required "Tests and coverage" path since a SonarCloud scan alone took ~46s, longer than pytest itself |
 | Type check (mypy) | Static typing on `app/` |
 | Security (bandit + pip-audit) | Code and dependency security |
+| Verify requirements.txt matches pyproject.toml | Regenerates the runtime lockfile (Python 3.14) and diffs it against what's committed |
+| Verify requirements-*.txt matches pyproject.toml | Same, for the four dev-tool lockfiles (Python 3.12) |
 | Docker build and scan | Image build + Trivy scan (blocks HIGH/CRITICAL on PR; advisory SARIF upload on `main`) |
 | Lint workflows (actionlint, zizmor) | Only when `.github/workflows/**` or `dependabot.yml` change: actionlint for correctness, zizmor for safety (template injection, excessive permissions, missing Dependabot cooldown) |
 

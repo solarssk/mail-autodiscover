@@ -140,5 +140,23 @@ broken release — fix the CHANGELOG entry and push again.
   in `[project.optional-dependencies]`, regenerate the matching file under Python 3.12
   (this repo's floor, and what those CI jobs run on): `pip-compile --extra test
   --generate-hashes --allow-unsafe -o requirements-test.txt pyproject.toml` (swap the extra
-  name and output file). CI regenerates and diffs all five lockfiles in one job. The `dev`
-  extra itself (local setup only, never installed by CI) stays unlocked.
+  name and output file). CI regenerates and diffs `requirements.txt` and the four dev-tool
+  lockfiles in two separate jobs (different interpreters, see above). The `dev` extra itself
+  (local setup only, never installed by CI) stays unlocked.
+- **The Dockerfile's `apt-get upgrade` step needs its `ARG CACHEBUST` fed a real per-run
+  value, or a real bug that shipped for a while undetected comes back**: Docker's build cache
+  keys that layer only on its command text (including any `ARG` it consumes) and its parent
+  layer, so without a per-build cache-buster it gets served from `docker-publish.yml`'s
+  `cache-from: type=gha` forever after the first build off a given digest — the image then
+  stops receiving Debian security patches even though the workflow appears to build normally
+  every time (confirmed: `apt-get upgrade` showed `CACHED` in every build log for weeks, and a
+  forced rebuild found a real pending OpenSSL update). `docker-publish.yml` passes
+  `CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}`, not the commit SHA — a
+  `workflow_dispatch` on an unchanged `main`, or a re-run of an existing run, would otherwise
+  keep the same SHA and hit the same stale cache again. The ARG's *placement* after
+  `COPY`/`pip install` is a separate, cache-efficiency choice, not part of the security
+  requirement: verified empirically that moving the ARG+RUN block earlier still forces a fresh
+  `apt-get upgrade` on every build (the CACHEBUST value alone determines that), it just also
+  cascades into invalidating the `COPY`/`pip install` layers on every build too — a real
+  reinstall-everything cost, not a staleness bug. Keep it late to avoid that cost, not because
+  moving it would reopen the original bug.
