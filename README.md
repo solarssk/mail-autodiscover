@@ -27,6 +27,16 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white" alt="Python 3.12+">
+  &nbsp;
+  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  &nbsp;
+  <img src="https://img.shields.io/badge/Pydantic-2-E92063?logo=pydantic&logoColor=white" alt="Pydantic 2">
+  &nbsp;
+  <img src="https://img.shields.io/badge/Uvicorn-blue" alt="Uvicorn">
+</p>
+
+<p align="center">
   <strong>Self-hosted mail client autodiscovery for your own domains.</strong><br>
   Outlook Autodiscover, Thunderbird Autoconfig, and Apple Mail profiles from one small container — no SaaS relay, no mailbox database, no per-client manual setup.
 </p>
