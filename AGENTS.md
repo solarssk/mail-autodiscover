@@ -173,3 +173,10 @@ broken release — fix the CHANGELOG entry and push again.
   cascades into invalidating the `COPY`/`pip install` layers on every build too — a real
   reinstall-everything cost, not a staleness bug. Keep it late to avoid that cost, not because
   moving it would reopen the original bug.
+- **The PR template's "Documentation impact" declaration is checked against the diff** by
+  `scripts/check_pr_docs_impact.py`, and it only counts the paths in its `DOCS_PATHS` as
+  documentation (`docs/`, `README.md`, `SECURITY.md`, `CHANGELOG.md`, `CONTRIBUTING.md`).
+  `AGENTS.md` and `CLAUDE.md` are not among them, so a PR that changes only those must tick
+  "No doc update needed" with a real reason; ticking "Docs updated" fails the check because
+  no declared doc path changed. Read that script before filling in the box, not after the
+  check goes red.
