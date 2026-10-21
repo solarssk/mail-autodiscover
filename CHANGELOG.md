@@ -6,14 +6,38 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
-### Changed
+## [0.4.2] - 2026-10-21
 
-- Tests now install `httpx2`, the client Starlette's `TestClient` asks for, instead of `httpx` (which it has deprecated), and any pytest warning now fails the run. Test-only: no runtime dependency or behaviour change.
+### What's new
+
+- Runtime dependencies refreshed: FastAPI 0.141.1 → 0.143.0, Starlette 1.6.0 → 1.8.0, Pydantic 2.13.5 → 2.14.1 (with `pydantic-core` 2.50.1), Uvicorn 0.54.0, and the Docker base image digest (`python:3.14-slim-bookworm`).
+- New `docs/endpoints.md`: endpoint reference with request and response formats, every status code and the setting behind it, and a worked Outlook POST example.
+- OpenSSF Best Practices badge (passing level, [project 15103](https://www.bestpractices.dev/projects/15103)) and a stack badge row in README.
+
+### What this means
+
+- No change to the service's behavior, configuration, or API: `app/` is untouched since 0.4.1.
+- FastAPI 0.143.0 makes automatic OpenTelemetry exporter setup opt-in. This service does not use it, so nothing changes.
+
+### Action required
+
+- No action required.
 
 ### Added
 
-- `docs/endpoints.md`: endpoint reference with request and response formats, every status code and the setting behind it, and a worked Outlook POST example. README now says where to open a bug report or feature request.
-- OpenSSF Best Practices badge (passing level, [project 15103](https://www.bestpractices.dev/projects/15103)) in README. The badge rows are regrouped: quality and security checks in the first row, release, registries, platforms and license in the second, and a third row for the stack (Python, FastAPI, Pydantic, Uvicorn).
+- `docs/endpoints.md` and a pointer in README to where bug reports and feature requests go.
+- OpenSSF Best Practices badge in README; badge rows regrouped, with a third row for the stack (Python, FastAPI, Pydantic, Uvicorn).
+- `opentelemetry-api` in `requirements.txt`, a new transitive dependency of FastAPI 0.142+.
+
+### Changed
+
+- Tests install `httpx2`, the client Starlette's `TestClient` asks for, instead of the deprecated `httpx`, and any pytest warning now fails the run. Test-only.
+- Python dependency updates: FastAPI, Starlette, Pydantic / `pydantic-core`, Uvicorn, httptools, uvloop, websockets, python-dotenv, certifi, plus the dev-tool lockfiles. Docker base image digest bumped. GitHub Actions bumped (including SonarSource/sonarqube-scan-action 8.3.0).
+- `AGENTS.md` documents the Dependabot missing-transitive-dependency lockfile failure.
+
+### Fixed
+
+- `requirements*.txt` regenerated so `pydantic-core` matches `pydantic` 2.14.1 (Dependabot had bumped only `pydantic`, which broke every `--require-hashes` install).
 
 ## [0.4.1] - 2026-09-30
 
@@ -443,7 +467,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.2...v0.3.3
