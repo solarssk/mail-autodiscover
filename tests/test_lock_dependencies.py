@@ -8,7 +8,8 @@ import pytest
 SPEC = importlib.util.spec_from_file_location(
     "lock_dependencies", Path(__file__).resolve().parents[1] / "scripts/lock_dependencies.py"
 )
-assert SPEC is not None and SPEC.loader is not None
+assert SPEC is not None
+assert SPEC.loader is not None
 locks = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(locks)
 
