@@ -128,34 +128,18 @@ broken release — fix the CHANGELOG entry and push again.
   when discussing multi-worker deployments.
 - **XML escaping uses `html.escape(..., quote=False)`**, not `xml.sax.saxutils.escape`.
   Keep it that way (Bandit B406).
-- **Runtime dependencies are locked in `requirements.txt`** (hash-pinned, generated with
-  `pip-compile`). If you change `[project.dependencies]` in `pyproject.toml`, regenerate
-  it under Python 3.14 (matching the Dockerfile's base image, not this repo's usual 3.12
-  dev-tooling version — `pip-compile` resolves marker-conditional dependencies using
-  whatever interpreter runs it): `pip-compile --generate-hashes --allow-unsafe -o
-  requirements.txt pyproject.toml`. CI fails if the two drift apart.
-- **CI's own dev-tool installs are hash-pinned too** (`requirements-test.txt`,
-  `requirements-lint.txt`, `requirements-typecheck.txt`, `requirements-security.txt`, one
-  per extra each CI job installs from). If you change `test`/`lint`/`typecheck`/`security`
-  in `[project.optional-dependencies]`, regenerate the matching file under Python 3.12
-  (this repo's floor, and what those CI jobs run on): `pip-compile --extra test
-  --generate-hashes --allow-unsafe -o requirements-test.txt pyproject.toml` (swap the extra
-  name and output file). CI regenerates and diffs `requirements.txt` and the four dev-tool
-  lockfiles in two separate jobs (different interpreters, see above). The `dev` extra itself
-  (local setup only, never installed by CI) stays unlocked.
-- **A Dependabot PR that fails nearly every CI job within seconds, at `pip install
-  --require-hashes`, is a lockfile problem, not a code problem.** Dependabot rewrites the
-  pins of the packages it bumps but does not add a *new* transitive dependency that the bump
-  introduces (PR #103: `fastapi` 0.142 started requiring `opentelemetry-api`). pip then
-  resolves the missing package on its own, and `--require-hashes` rejects the install with
-  "all requirements must have their versions pinned with ==". The fix is to check out the
-  PR branch, regenerate all five lockfiles with the commands above (3.14 for
-  `requirements.txt`, 3.12 for the four dev ones), and push to that branch. Use the exact
-  `pip-tools` version pinned in `ci.yml`'s two lock jobs and in `scripts/check.sh`, not the
-  latest: a newer release writes a different header, so the drift check fails even though
-  the pins are right. When running `scripts/check.sh` afterwards, `git add` the regenerated
-  files first — its drift check is `git diff --exit-code`, which compares against the index,
-  so unstaged lockfile changes read as drift.
+- **Dependencies are hash-pinned in five generated requirements files.** Regenerate
+  all of them after dependency changes, including Dependabot updates, with
+  `./scripts/lock_dependencies.sh`. It uses Python 3.14 for runtime and Python 3.12
+  for dev locks, in isolated environments with pip-tools pinned in the wrapper.
+  `./scripts/lock_dependencies.sh all --check` verifies installation content without
+  modifying tracked files; full-line comments and blank lines do not count as drift.
+  CI and `scripts/check.sh` use the same wrapper. The local `dev` extra stays unlocked.
+- **Dependabot can omit newly introduced transitive dependencies.** If hash-pinned
+  installs fail after an update, regenerate all five locks using the command above.
+  Do not disable hash verification or ignore changes to package versions or hashes.
+- **Ruff's version is pinned in the `lint` extra.** The local pre-commit hook uses
+  the active development environment; reinstall `.[dev]` after updating that pin.
 - **The Dockerfile's `apt-get upgrade` step needs its `ARG CACHEBUST` fed a real per-run
   value, or a real bug that shipped for a while undetected comes back**: Docker's build cache
   keys that layer only on its command text (including any `ARG` it consumes) and its parent

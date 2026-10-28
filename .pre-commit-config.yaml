@@ -2,13 +2,14 @@
 # Runs automatically before each git commit.
 
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.6
-    hooks:
-      - id: ruff
-
   - repo: local
     hooks:
+      - id: ruff
+        name: ruff
+        entry: ruff check
+        language: system
+        types_or: [python, pyi]
+
       - id: mypy
         name: mypy
         entry: mypy app

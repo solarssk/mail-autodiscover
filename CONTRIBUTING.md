@@ -40,17 +40,25 @@ Docker image actually installs from, so the exact same versions and artifacts ge
 installed on every build instead of whatever happens to satisfy the `>=` bounds in
 `pyproject.toml` on a given day.
 
-Whenever you add, remove, or change a runtime dependency, regenerate the lockfile in the
-same PR, using Python 3.14 (matching the Dockerfile's base image — `pip-compile` resolves
-marker-conditional dependencies using whatever interpreter runs it, and CI regenerates
-under 3.14 too):
+Regenerate all five lockfiles after dependency updates (including Dependabot updates):
 
 ```bash
-pip-compile --generate-hashes --allow-unsafe -o requirements.txt pyproject.toml
+./scripts/lock_dependencies.sh
 ```
 
-CI fails the PR if `requirements.txt` doesn't match what regenerating it produces, so this
-can't be forgotten silently.
+The script requires Python 3.14 for the runtime lock and Python 3.12 for dev locks.
+It creates isolated environments and installs the same pinned pip-tools version as CI.
+Existing compatible pins are preserved; this is not a blanket dependency upgrade.
+Use `runtime` or `dev` as the first argument to regenerate only that group.
+
+```bash
+./scripts/lock_dependencies.sh all --check
+```
+
+Check mode leaves tracked files untouched and compares all installation content,
+including versions, hashes, markers, and options. Full-line comments and blank lines
+are ignored so annotation changes from Dependabot do not block otherwise valid updates.
+CI and `scripts/check.sh` use this same entry point.
 
 CI's own dev-tool installs (`test`, `lint`, `typecheck`, `security` — the extras each CI
 job installs from, per-job, so no job pays for tools it never runs) are hash-pinned the
@@ -63,17 +71,9 @@ attack on PyPI would target; CI is as much a "build" step as the Docker image is
 `[project.optional-dependencies].dev` itself (for local setup, below) stays unlocked — it's
 never installed by CI, only by a developer's own machine.
 
-Regenerate a dev-tool lockfile the same way, under Python 3.12 (this repo's
-`requires-python` floor, and what those CI jobs actually run on):
-
-```bash
-pip-compile --extra test --generate-hashes --allow-unsafe -o requirements-test.txt pyproject.toml
-```
-
-(swap `test` and the output filename for `lint`, `typecheck`, or `security` as needed). CI
-regenerates and diffs `requirements.txt` (Python 3.14) and the four dev-tool lockfiles
-(Python 3.12) in two separate jobs — not one, since each set needs the interpreter it was
-actually compiled under — so a forgotten regeneration still fails the PR either way.
+The local Ruff pre-commit hook uses the active development environment, whose Ruff
+version is pinned by the `lint` extra. After a Ruff update, reinstall `.[dev]` so
+local hooks and CI use the same version.
 
 ## CI checks
 
@@ -87,7 +87,7 @@ actually compiled under — so a forgotten regeneration still fails the PR eithe
 | SonarCloud analysis | Separate, non-required job — kept off the required "Tests and coverage" path since a SonarCloud scan alone took ~46s, longer than pytest itself |
 | Type check (mypy) | Static typing on `app/` |
 | Security (bandit + pip-audit) | Code and dependency security |
-| Verify requirements.txt matches pyproject.toml | Regenerates the runtime lockfile (Python 3.14) and diffs it against what's committed |
+| Verify requirements.txt matches pyproject.toml | Checks regenerated runtime installation content (Python 3.14), ignoring comments |
 | Verify requirements-*.txt matches pyproject.toml | Same, for the four dev-tool lockfiles (Python 3.12) |
 | Docker build and scan | Image build + Trivy scan (blocks HIGH/CRITICAL on PR; advisory SARIF upload on `main`) |
 | Lint workflows (actionlint, zizmor) | Only when `.github/workflows/**` or `dependabot.yml` change: actionlint for correctness, zizmor for safety (template injection, excessive permissions, missing Dependabot cooldown) |

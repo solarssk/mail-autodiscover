@@ -70,7 +70,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      # Pinned via the `lint` extra (matches .pre-commit-config.yaml's `rev:`)
+      # Pinned via the `lint` extra (also used by the local pre-commit hook)
       # instead of a bare `pip install ruff`, so CI and pre-commit can't drift
       # to different ruff versions -- a rule added upstream under an
       # already-selected prefix (e.g. "B") would otherwise start failing in
@@ -228,24 +228,8 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-      # Pinned exactly (unlike pyproject.toml's own pip-tools>=7.4.0 floor for
-      # local dev use): pip-tools has a header-rendering bug where an unset
-      # --no-index defaults to a sentinel that never compares equal to its own
-      # False default, so it always echoes "--no-index" into the generated
-      # file's header regardless of whether the index was actually used.
-      # Harmless today (deterministic per pip-tools version), but an unpinned
-      # future pip-tools release changing that rendering could shift the
-      # header and break the diff below for a reason unrelated to any real
-      # dependency change.
-      - run: pip install "pip-tools==7.6.1"
-      # pip-compile keeps existing pins from requirements.txt when they still
-      # satisfy pyproject.toml, so re-running it without --upgrade reproduces
-      # the same file unless pyproject.toml's own constraints changed without
-      # regenerating the lock to match.
       - name: Verify requirements.txt matches pyproject.toml
-        run: |
-          pip-compile --generate-hashes --allow-unsafe -o requirements.txt pyproject.toml
-          git diff --exit-code requirements.txt
+        run: ./scripts/lock_dependencies.sh runtime --check
 
   dev-dependency-lock:
     name: Verify requirements-*.txt matches pyproject.toml
@@ -265,16 +249,8 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install "pip-tools==7.6.1"
       - name: Verify requirements-*.txt matches pyproject.toml
-        run: |
-          set -euo pipefail
-          for extra in test lint typecheck security; do
-            pip-compile --extra "$extra" --generate-hashes --allow-unsafe \
-              -o "requirements-${extra}.txt" pyproject.toml
-          done
-          git diff --exit-code requirements-test.txt requirements-lint.txt \
-            requirements-typecheck.txt requirements-security.txt
+        run: ./scripts/lock_dependencies.sh dev --check
 
   compat:
     name: Compatibility tests (Python 3.14)
