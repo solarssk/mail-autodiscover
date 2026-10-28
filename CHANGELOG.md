@@ -6,6 +6,41 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-10-28
+
+### What's new
+
+- Runtime dependencies refreshed: FastAPI 0.143.0 → 0.156.4, pydantic-settings 2.15.0 → 2.16.1, Starlette 1.8.0 → 1.9.0, and websockets 17.2 → 17.3.
+- Dependency maintenance now uses one regeneration command locally and in CI, with checks that ignore generated comments while still verifying installation content.
+
+### What this means
+
+- The mail configuration endpoints and configuration format are unchanged; there are no application code changes in this release.
+- Six filelock security alerts are resolved in the development/security toolchain. filelock is not installed in the service's runtime image.
+- Dependabot updates no longer fail lock checks solely because dependency provenance comments changed.
+
+### Action required
+
+- No configuration migration is required. Deploy the 0.4.3 image to receive the runtime dependency updates.
+- Contributors should reinstall `.[dev]` after updating Ruff; the pre-commit hook now uses the version pinned by the lint extra.
+
+### Changed
+
+- Updated Python runtime and development dependencies, including httpx2/httpcore2 2.15.1, Ruff 0.17.1, and filelock 4.2.4.
+- Updated GitHub Actions used by CI, CodeQL, workflow linting, releases, and container publishing.
+- Added `scripts/lock_dependencies.sh` as the shared regeneration/check entry point, using Python 3.14 for runtime dependencies and Python 3.12 for development dependencies with pinned pip-tools.
+- Updated contributor and agent documentation for dependency maintenance.
+
+### Fixed
+
+- Lock verification ignores full-line comments and blank lines while preserving checks of versions, hashes, environment markers, and installation options.
+- Local lock checks leave tracked files untouched and no longer depend on whether changes have been staged in Git.
+- Ruff's local pre-commit hook and CI use the same version source instead of independent pins.
+
+### Security
+
+- Updated filelock from 4.1.1 to 4.2.4 in `requirements-security.txt`, resolving Dependabot alerts #2–#7 affecting versions through 4.2.0. This is a tooling dependency via cachecontrol, not a runtime dependency of the mail service.
+
 ## [0.4.2] - 2026-10-21
 
 ### What's new
@@ -467,7 +502,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.3.3...v0.4.0
