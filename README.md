@@ -79,6 +79,8 @@ For any syntactically valid mailbox in an allowed domain, the service returns th
 
 Version 1.0.0 covers the implemented discovery formats, not universal compatibility with every mail client edition or version. A version-specific end-to-end compatibility matrix is not yet published.
 
+The [Outlook validation record](docs/clients/outlook.md#recorded-validation) lists the available maintainer report, installed versions, and remaining gaps. It is not a completed release sign-off.
+
 Validate account setup, sending, and receiving with the clients you deploy. An HTTP `200` confirms configuration retrieval, not a completed mailbox setup. In particular, do not assume classic Outlook and new Outlook use the same discovery flow. See the [client guides](#documentation) for setup details.
 
 ## How it works
