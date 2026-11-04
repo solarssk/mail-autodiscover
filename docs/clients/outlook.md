@@ -14,7 +14,7 @@ The maintainer reported a working Outlook setup on macOS on 2026-11-04. The inst
 | Functional result | Maintainer reports the setup works; not independently reproduced |
 | Not separately recorded | New/Legacy Outlook mode, fresh account discovery without manual server settings, send/receive results, and mail transport ports |
 
-This is a partial validation record, not a completed compatibility certification. It does not satisfy all of the [first stable release requirements](../../CONTRIBUTING.md#readiness-before-100). A separate [Thunderbird laboratory result](thunderbird.md#recorded-validation) is recorded; Apple Mail results remain unrecorded.
+This is a partial validation record, not a completed compatibility certification. See the [release validation scope](../../CONTRIBUTING.md#release-readiness). A separate [Thunderbird laboratory result](thunderbird.md#recorded-validation) is recorded; Apple Mail results remain unrecorded.
 
 ## What Users Do
 

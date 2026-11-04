@@ -135,19 +135,19 @@ one when the release is cut.
 
 ## Releases
 
-### Readiness before 1.0.0
+### Release readiness
 
-Do not infer mail-client compatibility from API tests alone. Before the first stable release, record actual account setup results:
+Release readiness covers this component's contract: return valid mail configuration for allowed domains without mailbox lookups, password handling, or outbound mail calls. It does not certify every mail client or its mail server.
 
-| Client | Required evidence |
-|--------|-------------------|
-| Outlook | Exact version, classic/new edition, OS, successful IMAP 993 and SMTP 587 STARTTLS setup, send and receive |
-| Thunderbird | Exact version and OS, successful discovery and send/receive; POP3 if advertised |
-| Apple Mail | iOS/macOS version, successful profile installation and send/receive, expected unsigned-profile warning |
+Before a release:
 
-State which versions are supported in the client guides. Keep untested clients marked unverified. In particular, the current Outlook XML maps both SSL and STARTTLS to `<SSL>on</SSL>`; do not change or certify that mapping without client evidence.
+- Run `./scripts/check.sh` and require the repository's CI gates to pass.
+- Preserve regression coverage for configuration selection, XML/profile output, transport settings, request limits, proxy trust, log privacy, and the no-mailbox-enumeration invariant.
+- Resolve confirmed security and compatibility defects in the implemented formats. Obtain an independent security review and a separate logic review before the first stable release.
 
-Run `./scripts/check.sh`, obtain an independent security review and a separate logic/compatibility review, and resolve confirmed findings before bumping the version.
+Record real-client results when available, including the version, OS, and scenarios actually checked. Do not infer client compatibility from HTTP `200` or claim untested clients are verified. The client guides distinguish completed tests, maintainer reports, and unknowns.
+
+A full client/OS matrix, send/receive tests for every client, and dedicated VMs are not release prerequisites for this configuration-only service. Additional client testing is appropriate for a reported compatibility defect or a change to that client's format. The current Outlook XML maps SSL and STARTTLS to `<SSL>on</SSL>`; do not silently change that mapping or describe it as universally verified.
 
 ### Maintenance
 
