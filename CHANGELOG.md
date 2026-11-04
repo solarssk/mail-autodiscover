@@ -14,7 +14,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### What this means
 
-- Mail configuration responses and the no-mailbox-enumeration guarantee are unchanged.
+- The no-mailbox-enumeration guarantee is unchanged. Internationalized mail server hosts are now returned in punycode, so response values change for those hosts.
 - Container proxy trust is handled by the application rather than two independent parsers.
 - These are release-preparation changes, not a declaration of verified compatibility with every Outlook, Thunderbird, or Apple Mail version.
 
@@ -35,6 +35,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Fixed
 
 - Fixed dark-mode text contrast and mobile layout on the public landing page.
+- In YAML mode, ignore unused global mail connection values before type validation so malformed ENV ports or socket types cannot prevent startup.
 
 ### Security
 

@@ -132,6 +132,10 @@ def test_plain_transport_requires_production_opt_in(
     if allow_insecure_mail:
         settings = _production_settings(**overrides, allow_insecure_mail=True)
         assert settings.allow_insecure_mail
+        domain = "example.test" if mode == "yaml" else "mydomain.com"
+        resolved = settings.domain_settings_for(domain)
+        assert resolved is not None
+        assert getattr(resolved, protocol).socket_type.value == "plain"
     else:
         with pytest.raises(ValidationError, match="ALLOW_INSECURE_MAIL"):
             _production_settings(**overrides)

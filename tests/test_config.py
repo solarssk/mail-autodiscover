@@ -180,13 +180,82 @@ def test_invalid_container_port_prevents_startup(port: int) -> None:
         make_settings(container_port=port)
 
 
-def test_yaml_ignores_unused_env_connection_values(tmp_path: Path) -> None:
+@pytest.mark.parametrize("source", ["init", "env", "dotenv"])
+@pytest.mark.parametrize("protocol", ["imap", "smtp", "pop3"])
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("host", ""),
+        ("port", "abc"),
+        ("socket_type", "invalid"),
+        ("authentication", "unknown"),
+    ],
+)
+def test_yaml_ignores_unused_env_connection_values(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    source: str,
+    protocol: str,
+    field: str,
+    value: str,
+) -> None:
     path = tmp_path / "config.yaml"
     profile = DomainMailSettings.from_env_settings(make_settings()).model_dump(mode="json")
     path.write_text(yaml.safe_dump({"domains": {"example.com": profile}}), encoding="utf-8")
-    settings = make_settings(
-        config_file=str(path), imap_host="", imap_port=0, imap_authentication="unknown"
+    key = f"{protocol}_{field}"
+    if source == "init":
+        settings = make_settings(config_file=str(path), **{key: value})
+    elif source == "env":
+        monkeypatch.setenv(key.upper(), value)
+        monkeypatch.setenv("CONFIG_FILE", str(path))
+        settings = Settings(_env_file=None, app_env="test")
+    else:
+        env_file = tmp_path / ".env"
+        env_file.write_text(f"CONFIG_FILE={path}\n{key.upper()}={value}\n", encoding="utf-8")
+        settings = Settings(_env_file=env_file, app_env="test")
+    resolved = settings.domain_settings_for("example.com")
+    assert resolved is not None
+    assert resolved.model_dump(mode="json") == profile
+
+
+@pytest.mark.parametrize("config_file", ["", "   "])
+@pytest.mark.parametrize("protocol", ["imap", "smtp", "pop3"])
+@pytest.mark.parametrize(("field", "value"), [("port", "abc"), ("socket_type", "invalid")])
+def test_env_mode_still_rejects_malformed_connection_values(
+    config_file: str, protocol: str, field: str, value: str
+) -> None:
+    with pytest.raises(ValidationError):
+        make_settings(config_file=config_file, **{f"{protocol}_{field}": value})
+
+
+def test_yaml_mode_still_validates_shared_settings(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    profile = DomainMailSettings.from_env_settings(make_settings()).model_dump(mode="json")
+    path.write_text(yaml.safe_dump({"domains": {"example.com": profile}}), encoding="utf-8")
+    with pytest.raises(ValidationError, match="username_format"):
+        Settings(
+            _env_file=None,
+            app_env="test",
+            config_file=str(path),
+            imap_port="abc",
+            username_format="invalid",
+        )
+
+
+def test_yaml_mode_ignores_unused_pop3_enabled_alias(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    profile = DomainMailSettings.from_env_settings(make_settings()).model_dump(mode="json")
+    path.write_text(yaml.safe_dump({"domains": {"example.com": profile}}), encoding="utf-8")
+    settings = Settings(
+        _env_file=None, APP_ENV="test", CONFIG_FILE=str(path), POP3_ENABLED="invalid"
     )
     resolved = settings.domain_settings_for("example.com")
     assert resolved is not None
-    assert resolved.imap.port == 993
+    assert resolved.model_dump(mode="json") == profile
+
+
+def test_yaml_selection_does_not_hide_invalid_file(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_text("domains: [unterminated", encoding="utf-8")
+    with pytest.raises(ValidationError, match="not valid YAML"):
+        make_settings(config_file=str(path), imap_port="abc")

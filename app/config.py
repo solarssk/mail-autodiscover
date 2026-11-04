@@ -226,6 +226,23 @@ class Settings(BaseSettings):
     apple_mobileconfig_enabled: bool = Field(default=True, alias="APPLE_MOBILECONFIG_ENABLED")
     domain_configs: dict[str, DomainMailSettings] = Field(default_factory=dict, exclude=True)
 
+    @model_validator(mode="before")
+    @classmethod
+    def select_mail_configuration(cls, data: object) -> object:
+        """Ignore global mail connection fields before parsing when YAML is selected."""
+        if not isinstance(data, dict):
+            return data
+        config_file = data.get("CONFIG_FILE", data.get("config_file", ""))
+        if not isinstance(config_file, str) or not config_file.strip():
+            return data
+        unused_keys = {
+            key
+            for name, field in cls.model_fields.items()
+            if name.startswith(("imap_", "smtp_", "pop3_"))
+            for key in (name, field.alias)
+        }
+        return {key: value for key, value in data.items() if key not in unused_keys}
+
     @field_validator("allowed_domains", mode="before")
     @classmethod
     def parse_allowed_domains(cls, value: object) -> str:
@@ -295,21 +312,27 @@ class Settings(BaseSettings):
                 self._validate_env_config(errors)
             profiles = [profile]
 
-        if self.app_env.lower() == "production" and not self.allow_insecure_mail:
-            for profile in profiles:
-                servers = [profile.imap, profile.smtp]
-                if profile.pop3 and profile.pop3.enabled:
-                    servers.append(profile.pop3)
-                if any(server.socket_type == SocketType.PLAIN for server in servers):
-                    errors.append(
-                        "plain mail transport is disabled in production; use SSL or STARTTLS, "
-                        "or explicitly set ALLOW_INSECURE_MAIL=true for a legacy server"
-                    )
-                    break
-
+        self._validate_mail_transport(profiles, errors)
         if errors:
             raise ValueError("; ".join(errors))
         return self
+
+    def _validate_mail_transport(
+        self, profiles: list[DomainMailSettings], errors: list[str]
+    ) -> None:
+        """Require an explicit exception for active plaintext mail transports in production."""
+        if self.app_env.lower() != "production" or self.allow_insecure_mail:
+            return
+        for profile in profiles:
+            servers = [profile.imap, profile.smtp]
+            if profile.pop3 and profile.pop3.enabled:
+                servers.append(profile.pop3)
+            if any(server.socket_type == SocketType.PLAIN for server in servers):
+                errors.append(
+                    "plain mail transport is disabled in production; use SSL or STARTTLS, "
+                    "or explicitly set ALLOW_INSECURE_MAIL=true for a legacy server"
+                )
+                return
 
     def _load_domain_configs(self) -> dict[str, DomainMailSettings]:
         """Read required YAML when CONFIG_FILE is set; empty selects ENV."""
