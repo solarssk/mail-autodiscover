@@ -1,5 +1,7 @@
 # Thunderbird
 
+The service returns Autoconfig XML 1.1. No version-specific compatibility matrix is published; validate account setup, sending, and receiving with your deployed version. See the [compatibility scope](../../README.md#client-compatibility).
+
 ## What Users Do
 
 1. Open account setup.

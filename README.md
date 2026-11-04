@@ -75,6 +75,12 @@ If you want a service you can deploy behind HTTPS and mostly forget about, this 
 
 For any syntactically valid mailbox in an allowed domain, the service returns the configured IMAP/SMTP settings and, optionally, POP3 for Thunderbird — regardless of whether that mailbox actually exists, and without ever exposing the internal domain list on the landing page.
 
+### Client compatibility
+
+Version 1.0.0 covers the implemented discovery formats, not universal compatibility with every mail client edition or version. A version-specific end-to-end compatibility matrix is not yet published.
+
+Validate account setup, sending, and receiving with the clients you deploy. An HTTP `200` confirms configuration retrieval, not a completed mailbox setup. In particular, do not assume classic Outlook and new Outlook use the same discovery flow. See the [client guides](#documentation) for setup details.
+
 ## How it works
 
 ```mermaid

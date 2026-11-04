@@ -1,5 +1,7 @@
 # Apple Mail
 
+The service generates unsigned IMAP account profiles for iOS and macOS. No version-specific compatibility matrix is published; validate profile installation, sending, and receiving on your devices. See the [compatibility scope](../../README.md#client-compatibility).
+
 ## What Users Do
 
 1. Open the generated `.mobileconfig` URL in Safari.

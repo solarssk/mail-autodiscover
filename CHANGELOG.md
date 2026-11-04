@@ -6,8 +6,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-04
+
 ### What's new
 
+- First stable release of the stateless mail configuration service: Outlook Autodiscover XML, Thunderbird Autoconfig, and unsigned Apple Mail profiles for allowed domains.
 - Redesigned the public information page with readable light/dark themes, a responsive technical layout, and an explanation of the discovery formats.
 - Replaced the favicon and Apple touch icon with a matching envelope mark.
 - Made mail configuration selection explicit and added startup checks for connection settings.
@@ -16,7 +19,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 - The no-mailbox-enumeration guarantee is unchanged. Internationalized mail server hosts are now returned in punycode, so response values change for those hosts.
 - Container proxy trust is handled by the application rather than two independent parsers.
-- These are release-preparation changes, not a declaration of verified compatibility with every Outlook, Thunderbird, or Apple Mail version.
+- The stable release covers the implemented configuration formats, not every mail client edition or version. A version-specific end-to-end compatibility matrix is not yet published.
 
 ### Action required
 
@@ -24,13 +27,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Compose binds to `127.0.0.1` by default. Containerized proxies should use a shared Docker network; remote proxies need an explicit private `HOST_BIND` and firewall restriction.
 - Replace invalid hosts, out-of-range ports, or unknown authentication values. Use SSL/STARTTLS, or explicitly set `ALLOW_INSECURE_MAIL=true` for an intentional plaintext legacy configuration.
 - Use exact endpoint paths, without an extra trailing slash. Non-container Uvicorn launches should include `--no-proxy-headers`.
+- Set `IMAGE_TAG=1.0.0` or pin the released image digest in production. Existing `.env` or Portainer overrides take precedence over the updated Compose defaults.
 
 ### Changed
 
 - Simplified agent guidance, documented proxy topologies and maintenance checks, and clarified release compatibility evidence.
-- Aligned prebuilt Compose image defaults and `.env.example` with version 0.4.3; added drift tests.
+- Aligned prebuilt Compose image defaults and `.env.example` with version 1.0.0; added drift tests.
 - Disabled automatic trailing-slash redirects to avoid HTTP redirects behind TLS termination.
 - Normalized internationalized mail server hostnames to punycode for client responses.
+- Updated runtime and development dependencies since 0.4.3, including FastAPI 0.162.0, Starlette 1.10.0, httpx2/httpcore2 2.16.0, and Ruff 0.17.3.
+- Updated the GitHub Actions used for container login, SonarCloud analysis, and workflow linting.
 
 ### Fixed
 
@@ -539,7 +545,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Branch protection and repository labels
 - MIT license
 
-[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/solarssk/mail-autodiscover/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.3...v1.0.0
 [0.4.3]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/solarssk/mail-autodiscover/compare/v0.4.0...v0.4.1

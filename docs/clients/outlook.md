@@ -1,5 +1,7 @@
 # Outlook
 
+The service returns IMAP/SMTP Autodiscover XML. It does not implement Exchange account provisioning. No version-specific compatibility matrix is published; classic Outlook and new Outlook are not interchangeable compatibility claims. See the [compatibility scope](../../README.md#client-compatibility).
+
 ## What Users Do
 
 1. Add the mailbox address in Outlook.

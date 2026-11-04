@@ -6,7 +6,7 @@
 
 services:
   mail-autodiscover:
-    image: docker.io/solarssk/mail-autodiscover:${IMAGE_TAG:-0.4.3}
+    image: docker.io/solarssk/mail-autodiscover:${IMAGE_TAG:-1.0.0}
     container_name: ${CONTAINER_NAME:-mail-autodiscover}
     restart: unless-stopped
     ports:
