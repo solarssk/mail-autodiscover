@@ -77,9 +77,9 @@ For any syntactically valid mailbox in an allowed domain, the service returns th
 
 ### Client compatibility
 
-Version 1.0.0 covers the implemented discovery formats, not universal compatibility with every mail client edition or version. A version-specific end-to-end compatibility matrix is not yet published.
+Version 1.0.0 covers the implemented discovery formats, not universal compatibility with every mail client edition or version. Cross-client end-to-end validation remains incomplete.
 
-The [Outlook validation record](docs/clients/outlook.md#recorded-validation) lists the available maintainer report, installed versions, and remaining gaps. It is not a completed release sign-off.
+The [Thunderbird laboratory result](docs/clients/thunderbird.md#recorded-validation) records successful HTTPS discovery, account setup, authenticated sending, and full message retrieval for Thunderbird 153.6.0 ESR on Debian 12. The [Outlook validation record](docs/clients/outlook.md#recorded-validation) remains a partial maintainer report. Apple Mail results are not yet recorded; these records do not constitute a completed release sign-off.
 
 Validate account setup, sending, and receiving with the clients you deploy. An HTTP `200` confirms configuration retrieval, not a completed mailbox setup. In particular, do not assume classic Outlook and new Outlook use the same discovery flow. See the [client guides](#documentation) for setup details.
 

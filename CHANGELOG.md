@@ -19,7 +19,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 - The no-mailbox-enumeration guarantee is unchanged. Internationalized mail server hosts are now returned in punycode, so response values change for those hosts.
 - Container proxy trust is handled by the application rather than two independent parsers.
-- The stable release covers the implemented configuration formats, not every mail client edition or version. A version-specific end-to-end compatibility matrix is not yet published.
+- The stable release covers the implemented configuration formats, not every mail client edition or version. Cross-client end-to-end validation remains incomplete; the client guides distinguish completed tests from partial reports.
 
 ### Action required
 
@@ -37,6 +37,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Normalized internationalized mail server hostnames to punycode for client responses.
 - Updated runtime and development dependencies since 0.4.3, including FastAPI 0.162.0, Starlette 1.10.0, httpx2/httpcore2 2.16.0, and Ruff 0.17.3.
 - Updated the GitHub Actions used for container login, SonarCloud analysis, and workflow linting.
+- Recorded a successful isolated Thunderbird 153.6.0 ESR test on Debian 12: HTTPS discovery, automatic account setup, IMAP 993, SMTP 587 STARTTLS, and send/receive with a full message body check.
 
 ### Fixed
 
