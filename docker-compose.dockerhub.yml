@@ -6,11 +6,11 @@
 
 services:
   mail-autodiscover:
-    image: docker.io/solarssk/mail-autodiscover:${IMAGE_TAG:-0.4.0}
+    image: docker.io/solarssk/mail-autodiscover:${IMAGE_TAG:-0.4.3}
     container_name: ${CONTAINER_NAME:-mail-autodiscover}
     restart: unless-stopped
     ports:
-      - "${HOST_PORT:-8088}:${CONTAINER_PORT:-8000}"
+      - "${HOST_BIND:-127.0.0.1}:${HOST_PORT:-8088}:${CONTAINER_PORT:-8000}"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\\\"CONTAINER_PORT\\\", \\\"8000\\\")}/health')\""]
       interval: 30s
@@ -20,7 +20,8 @@ services:
       APP_NAME: ${APP_NAME:-mail-autodiscover}
       APP_ENV: ${APP_ENV:-production}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://autodiscover.example.com}
-      CONFIG_FILE: ${CONFIG_FILE:-/config/config.yaml}
+      CONFIG_FILE: ${CONFIG_FILE:-}
+      ALLOW_INSECURE_MAIL: "${ALLOW_INSECURE_MAIL:-false}"
       ALLOWED_DOMAINS: ${ALLOWED_DOMAINS:-example.com}
       MAIL_DISPLAY_NAME: ${MAIL_DISPLAY_NAME:-Example Mail}
       MAIL_DISPLAY_SHORT_NAME: ${MAIL_DISPLAY_SHORT_NAME:-Example}

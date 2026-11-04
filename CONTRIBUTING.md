@@ -135,6 +135,36 @@ one when the release is cut.
 
 ## Releases
 
+### Readiness before 1.0.0
+
+Do not infer mail-client compatibility from API tests alone. Before the first stable release, record actual account setup results:
+
+| Client | Required evidence |
+|--------|-------------------|
+| Outlook | Exact version, classic/new edition, OS, successful IMAP 993 and SMTP 587 STARTTLS setup, send and receive |
+| Thunderbird | Exact version and OS, successful discovery and send/receive; POP3 if advertised |
+| Apple Mail | iOS/macOS version, successful profile installation and send/receive, expected unsigned-profile warning |
+
+State which versions are supported in the client guides. Keep untested clients marked unverified. In particular, the current Outlook XML maps both SSL and STARTTLS to `<SSL>on</SSL>`; do not change or certify that mapping without client evidence.
+
+Run `./scripts/check.sh`, obtain an independent security review and a separate logic/compatibility review, and resolve confirmed findings before bumping the version.
+
+### Maintenance
+
+Review weekly Dependabot updates and security alerts, even when no features are planned. OS patches only enter the image during a build; scheduled scanners alone do not update deployed containers.
+
+For a fresh scan and Debian patch check on unchanged `main`, dispatch the existing publisher:
+
+```bash
+gh workflow run docker-publish.yml --ref main
+```
+
+Its per-run `CACHEBUST` forces OS updates; the build gates both architectures before updating `latest` and the GHCR commit tag. It does not update an existing semver release tag. If fixes are needed by users pinned to a release, publish a new patch version and document the upgrade. Do not re-dispatch an old version tag expecting a rebuild: version dispatches only promote the existing digest.
+
+Keep the existing pipelines rather than adding another scheduler or release system. Check alerts promptly for critical issues and document any client-driven compatibility change.
+
+### Release workflow
+
 - Merge **all** open PRs (including Dependabot) before cutting a release.
 - Update `CHANGELOG.md` and `pyproject.toml` version on `main` via PR.
 - Images are published to **GHCR and Docker Hub** on every push to `main` and on version tags `v*`.

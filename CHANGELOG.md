@@ -6,6 +6,43 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### What's new
+
+- Redesigned the public information page with readable light/dark themes, a responsive technical layout, and an explanation of the discovery formats.
+- Replaced the favicon and Apple touch icon with a matching envelope mark.
+- Made mail configuration selection explicit and added startup checks for connection settings.
+
+### What this means
+
+- The no-mailbox-enumeration guarantee is unchanged. Internationalized mail server hosts are now returned in punycode, so response values change for those hosts.
+- Container proxy trust is handled by the application rather than two independent parsers.
+- These are release-preparation changes, not a declaration of verified compatibility with every Outlook, Thunderbird, or Apple Mail version.
+
+### Action required
+
+- For ENV mode, clear `CONFIG_FILE`. For YAML mode, set it to a readable, valid file; missing files now prevent startup.
+- Compose binds to `127.0.0.1` by default. Containerized proxies should use a shared Docker network; remote proxies need an explicit private `HOST_BIND` and firewall restriction.
+- Replace invalid hosts, out-of-range ports, or unknown authentication values. Use SSL/STARTTLS, or explicitly set `ALLOW_INSECURE_MAIL=true` for an intentional plaintext legacy configuration.
+- Use exact endpoint paths, without an extra trailing slash. Non-container Uvicorn launches should include `--no-proxy-headers`.
+
+### Changed
+
+- Simplified agent guidance, documented proxy topologies and maintenance checks, and clarified release compatibility evidence.
+- Aligned prebuilt Compose image defaults and `.env.example` with version 0.4.3; added drift tests.
+- Disabled automatic trailing-slash redirects to avoid HTTP redirects behind TLS termination.
+- Normalized internationalized mail server hostnames to punycode for client responses.
+
+### Fixed
+
+- Fixed dark-mode text contrast and mobile layout on the public landing page.
+- In YAML mode, ignore unused global mail connection values before type validation so malformed ENV ports or socket types cannot prevent startup.
+
+### Security
+
+- Added shared validation of effective ENV/YAML mail profiles, explicit YAML failure, and an opt-in for production plaintext mail transport.
+- Bound all Compose examples to loopback by default and disabled Uvicorn's separate forwarded-header parser.
+- Added TCP-level regression coverage for the container startup command and forged forwarded headers.
+
 ## [0.4.3] - 2026-10-28
 
 ### What's new

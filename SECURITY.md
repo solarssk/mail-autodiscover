@@ -89,6 +89,16 @@ There is no admin API in the current version. Configuration comes from environme
 
 **Mitigation:** `get_client_ip()` only honors these headers when the immediate TCP peer is inside `TRUSTED_PROXY_IPS`, and even then parses `X-Forwarded-For` right-to-left, skipping hops that are themselves trusted proxies. `TRUST_PROXY_HEADERS` defaults to `false`.
 
+Uvicorn's independent proxy parsing is disabled in the container to preserve that TCP peer. Use `--no-proxy-headers` for other launches. The application prefers `X-Real-IP`, so the trusted proxy must overwrite or remove client-supplied values; peer trust does not validate headers passed through unchanged.
+
+Trailing-slash variants of routes return `404`, avoiding HTTP redirects behind TLS termination without introducing a second forwarded-protocol trust policy.
+
+### Unsafe mail configuration
+
+The effective ENV or YAML profile is validated before startup. Hosts must be IP literals or DNS hostnames, and ports must be in `1` to `65535`. A nonempty `CONFIG_FILE` must be readable and valid; a missing file never silently selects another profile.
+
+Production rejects `plain` mail transport unless the administrator explicitly sets `ALLOW_INSECURE_MAIL=true`. This exception allows legacy setups but does not make them secure. `password-cleartext` over SSL or STARTTLS is not an unencrypted connection.
+
 ### Domain membership is observable — mailbox existence is not
 
 The guarantee under "Core security property" above is scoped to mailboxes *within* an allowed domain; it does not extend to hiding which domains are configured at all. A request for a domain this server doesn't handle reaches `_domain_error_response()` and returns 404 or 400 (per `RETURN_404_FOR_UNKNOWN_DOMAIN`), while any syntactically valid mailbox in a configured domain returns a successful configuration regardless of whether that specific mailbox exists. Probing a list of candidate domains against this server can therefore reveal which ones it serves — that's an inherent consequence of the server correctly declining domains it doesn't handle, not something a response-shape mitigation can close. The landing page at least never lists configured domains outright, so it doesn't hand that list over for free.
@@ -163,6 +173,7 @@ access tokens settings and issue a replacement.
 6. In production, pin images (GHCR or Docker Hub — same digest, same scan results) by semver tag or digest instead of using `latest`.
 7. With `APP_ENV=production`, the service refuses to start on placeholder values (`example.com`, `mail.example.com`, `http://localhost`, missing `TRUSTED_PROXY_IPS` when proxy trust is on).
 8. **Do not run multiple uvicorn workers** (`--workers N` or Gunicorn multi-process) without an external rate-limiter. The built-in rate limiter is in-process only; with N workers the effective per-IP limit becomes `N × RATE_LIMIT_PER_MINUTE`.
+9. Compose binds to loopback by default. For a remote proxy, use `HOST_BIND` with a private LAN address and a firewall restriction. Containers on a shared Docker network can still reach the service directly.
 
 ## Reverse proxy logging
 

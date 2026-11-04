@@ -3,13 +3,23 @@
 from __future__ import annotations
 
 import ipaddress
+import re
+import unicodedata
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
-from typing import Protocol
+from typing import Annotated, Protocol
 
 import yaml  # type: ignore[import-untyped]
-from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    AliasChoices,
+    BaseModel,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _MAX_REQUEST_BODY_BYTES = 1_048_576
@@ -32,13 +42,52 @@ class SocketType(StrEnum):
     PLAIN = "plain"
 
 
+class Authentication(StrEnum):
+    """Authentication tokens defined by the Thunderbird Autoconfig format."""
+
+    PASSWORD_CLEARTEXT = "password-cleartext"
+    PASSWORD_ENCRYPTED = "password-encrypted"
+    NTLM = "NTLM"
+    GSSAPI = "GSSAPI"
+    CLIENT_IP = "client-IP-address"
+    TLS_CLIENT_CERT = "TLS-client-cert"
+    OAUTH2 = "OAuth2"
+    NONE = "none"
+    SMTP_AFTER_POP = "SMTP-after-POP"
+
+
+def _validate_mail_host(value: str) -> str:
+    """Accept IP literals and DNS names, not URLs or host:port strings."""
+    if any(char.isspace() or unicodedata.category(char).startswith("C") for char in value):
+        raise ValueError("Mail host must not contain whitespace or control characters")
+    try:
+        ipaddress.ip_address(value)
+        return value
+    except ValueError:
+        pass
+
+    try:
+        hostname = value.encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise ValueError("Mail host must be an IP address or DNS hostname") from exc
+    labels = hostname.removesuffix(".").split(".")
+    if len(hostname.removesuffix(".")) > 253 or not all(
+        re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?", label) for label in labels
+    ):
+        raise ValueError("Mail host must be an IP address or DNS hostname, without a URL or port")
+    return hostname
+
+
+MailHost = Annotated[str, AfterValidator(_validate_mail_host)]
+
+
 class MailServerSettings(BaseModel):
     """Connection settings for one mail protocol."""
 
-    host: str
-    port: int
+    host: MailHost
+    port: int = Field(ge=1, le=65535)
     socket_type: SocketType
-    authentication: str
+    authentication: Authentication
 
     @field_validator("socket_type", mode="before")
     @classmethod
@@ -63,6 +112,15 @@ class DomainMailSettings(BaseModel):
     smtp: MailServerSettings
     pop3: Pop3Settings | None = None
 
+    @field_validator("imap", "pop3")
+    @classmethod
+    def validate_incoming_authentication(
+        cls, server: MailServerSettings | None
+    ) -> MailServerSettings | None:
+        if server and server.authentication == Authentication.SMTP_AFTER_POP:
+            raise ValueError("SMTP-after-POP authentication is only valid for SMTP")
+        return server
+
     @classmethod
     def from_env_settings(cls, settings: Settings) -> DomainMailSettings:
         """Build a domain config from the global environment-based settings."""
@@ -73,20 +131,20 @@ class DomainMailSettings(BaseModel):
                 host=settings.imap_host,
                 port=settings.imap_port,
                 socket_type=settings.imap_socket_type,
-                authentication=settings.imap_authentication,
+                authentication=Authentication(settings.imap_authentication),
             ),
             smtp=MailServerSettings(
                 host=settings.smtp_host,
                 port=settings.smtp_port,
                 socket_type=settings.smtp_socket_type,
-                authentication=settings.smtp_authentication,
+                authentication=Authentication(settings.smtp_authentication),
             ),
             pop3=Pop3Settings(
                 enabled=settings.pop3_enabled,
                 host=settings.pop3_host,
                 port=settings.pop3_port,
                 socket_type=settings.pop3_socket_type,
-                authentication=settings.pop3_authentication,
+                authentication=Authentication(settings.pop3_authentication),
             ),
         )
 
@@ -110,7 +168,8 @@ class Settings(BaseSettings):
     app_name: str = Field(default="mail-autodiscover", alias="APP_NAME")
     app_env: str = Field(default="production", alias="APP_ENV")
     public_base_url: str = Field(default="http://localhost:8000", alias="PUBLIC_BASE_URL")
-    config_file: str = Field(default="/config/config.yaml", alias="CONFIG_FILE")
+    config_file: str = Field(default="", alias="CONFIG_FILE")
+    allow_insecure_mail: bool = Field(default=False, alias="ALLOW_INSECURE_MAIL")
 
     allowed_domains: str = Field(default=_PLACEHOLDER_DOMAIN, alias="ALLOWED_DOMAINS")
 
@@ -129,7 +188,7 @@ class Settings(BaseSettings):
 
     username_format: UsernameFormat = Field(default=UsernameFormat.EMAIL, alias="USERNAME_FORMAT")
 
-    container_port: int = Field(default=8000, alias="CONTAINER_PORT")
+    container_port: int = Field(default=8000, ge=1, le=65535, alias="CONTAINER_PORT")
 
     trust_proxy_headers: bool = Field(default=False, alias="TRUST_PROXY_HEADERS")
     trusted_proxy_ips: str = Field(
@@ -156,9 +215,7 @@ class Settings(BaseSettings):
     outlook_enabled: bool = Field(default=True, alias="OUTLOOK_ENABLED")
     thunderbird_enabled: bool = Field(default=True, alias="THUNDERBIRD_ENABLED")
 
-    return_404_for_unknown_domain: bool = Field(
-        default=True, alias="RETURN_404_FOR_UNKNOWN_DOMAIN"
-    )
+    return_404_for_unknown_domain: bool = Field(default=True, alias="RETURN_404_FOR_UNKNOWN_DOMAIN")
     disable_access_log: bool = Field(default=False, alias="DISABLE_ACCESS_LOG")
     access_log_skip_paths: str = Field(
         default="/health,/ready,/favicon.ico,/apple-touch-icon.png",
@@ -168,6 +225,23 @@ class Settings(BaseSettings):
 
     apple_mobileconfig_enabled: bool = Field(default=True, alias="APPLE_MOBILECONFIG_ENABLED")
     domain_configs: dict[str, DomainMailSettings] = Field(default_factory=dict, exclude=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def select_mail_configuration(cls, data: object) -> object:
+        """Ignore global mail connection fields before parsing when YAML is selected."""
+        if not isinstance(data, dict):
+            return data
+        config_file = data.get("CONFIG_FILE", data.get("config_file", ""))
+        if not isinstance(config_file, str) or not config_file.strip():
+            return data
+        unused_keys = {
+            key
+            for name, field in cls.model_fields.items()
+            if name.startswith(("imap_", "smtp_", "pop3_"))
+            for key in (name, field.alias)
+        }
+        return {key: value for key, value in data.items() if key not in unused_keys}
 
     @field_validator("allowed_domains", mode="before")
     @classmethod
@@ -231,23 +305,42 @@ class Settings(BaseSettings):
 
         if self.domain_configs:
             self._validate_domain_config(errors)
-        elif self.app_env.lower() == "production":
-            self._validate_env_config(errors)
+            profiles = list(self.domain_configs.values())
+        else:
+            profile = DomainMailSettings.from_env_settings(self)
+            if self.app_env.lower() == "production":
+                self._validate_env_config(errors)
+            profiles = [profile]
 
+        self._validate_mail_transport(profiles, errors)
         if errors:
             raise ValueError("; ".join(errors))
         return self
 
+    def _validate_mail_transport(
+        self, profiles: list[DomainMailSettings], errors: list[str]
+    ) -> None:
+        """Require an explicit exception for active plaintext mail transports in production."""
+        if self.app_env.lower() != "production" or self.allow_insecure_mail:
+            return
+        for profile in profiles:
+            servers = [profile.imap, profile.smtp]
+            if profile.pop3 and profile.pop3.enabled:
+                servers.append(profile.pop3)
+            if any(server.socket_type == SocketType.PLAIN for server in servers):
+                errors.append(
+                    "plain mail transport is disabled in production; use SSL or STARTTLS, "
+                    "or explicitly set ALLOW_INSECURE_MAIL=true for a legacy server"
+                )
+                return
+
     def _load_domain_configs(self) -> dict[str, DomainMailSettings]:
-        """Read and validate per-domain YAML config if the configured file exists."""
+        """Read required YAML when CONFIG_FILE is set; empty selects ENV."""
         config_path = self.config_file.strip()
         if not config_path:
             return {}
 
         path = Path(config_path)
-        if not path.exists():
-            return {}
-
         try:
             raw = yaml.safe_load(path.read_text(encoding="utf-8"))
         except OSError as exc:
@@ -260,7 +353,7 @@ class Settings(BaseSettings):
 
         try:
             parsed = DomainConfigFile.model_validate(raw)
-        except Exception as exc:
+        except ValidationError as exc:
             raise ValueError(f"CONFIG_FILE {path} has invalid domain config: {exc}") from exc
 
         normalized: dict[str, DomainMailSettings] = {}
@@ -294,8 +387,7 @@ class Settings(BaseSettings):
         if self.trust_proxy_headers:
             if not self.trusted_proxy_ips.strip():
                 errors.append(
-                    "TRUST_PROXY_HEADERS=true requires non-empty "
-                    "TRUSTED_PROXY_IPS in production"
+                    "TRUST_PROXY_HEADERS=true requires non-empty TRUSTED_PROXY_IPS in production"
                 )
             elif not self.trusted_proxy_networks:
                 errors.append(

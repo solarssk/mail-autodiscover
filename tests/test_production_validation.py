@@ -1,8 +1,12 @@
 """Tests for production configuration fail-fast validation."""
 
+from pathlib import Path
+
 import pytest
+import yaml
 from pydantic import ValidationError
 
+from app.config import DomainMailSettings
 from tests.conftest import make_settings
 
 
@@ -102,3 +106,41 @@ def test_production_rejects_body_limit_over_max() -> None:
 def test_non_production_allows_placeholder_defaults() -> None:
     settings = make_settings(app_env="test")
     assert settings.allowed_domains_set == frozenset({"example.com", "example.pl"})
+
+
+@pytest.mark.parametrize("mode", ["env", "yaml"])
+@pytest.mark.parametrize("protocol", ["imap", "smtp", "pop3"])
+@pytest.mark.parametrize("allow_insecure_mail", [False, True])
+def test_plain_transport_requires_production_opt_in(
+    tmp_path: Path, mode: str, protocol: str, allow_insecure_mail: bool
+) -> None:
+    overrides: dict[str, object] = {
+        f"{protocol}_socket_type": "plain",
+        "pop3_enabled": True,
+    }
+    if mode == "yaml":
+        profile = DomainMailSettings.from_env_settings(
+            _production_settings(**overrides, allow_insecure_mail=True)
+        )
+        path = tmp_path / "config.yaml"
+        path.write_text(
+            yaml.safe_dump({"domains": {"example.test": profile.model_dump(mode="json")}}),
+            encoding="utf-8",
+        )
+        overrides = {"config_file": str(path)}
+
+    if allow_insecure_mail:
+        settings = _production_settings(**overrides, allow_insecure_mail=True)
+        assert settings.allow_insecure_mail
+        domain = "example.test" if mode == "yaml" else "mydomain.com"
+        resolved = settings.domain_settings_for(domain)
+        assert resolved is not None
+        assert getattr(resolved, protocol).socket_type.value == "plain"
+    else:
+        with pytest.raises(ValidationError, match="ALLOW_INSECURE_MAIL"):
+            _production_settings(**overrides)
+
+
+def test_disabled_plain_pop3_does_not_require_exception() -> None:
+    settings = _production_settings(pop3_socket_type="plain", pop3_enabled=False)
+    assert not settings.allow_insecure_mail
