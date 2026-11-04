@@ -39,3 +39,16 @@ def test_build_release_notes_v0_2_0_has_admin_action() -> None:
     assert "### 🛠️ Action required" in notes
     assert "review and set `TRUSTED_PROXY_IPS`" in notes
     assert "### 🔒 Security" in notes
+
+
+def test_build_release_notes_v1_0_0_has_upgrade_contract() -> None:
+    notes = build_release_notes("1.0.0")
+    assert "First stable release" in notes
+    assert "### 🛠️ Action required" in notes
+    for setting in ["CONFIG_FILE", "HOST_BIND", "ALLOW_INSECURE_MAIL", "IMAGE_TAG=1.0.0"]:
+        assert setting in notes
+    assert "Cross-client end-to-end validation remains incomplete" in notes
+    assert "ghcr.io/solarssk/mail-autodiscover:1.0.0" in notes
+    assert "docker.io/solarssk/mail-autodiscover:1.0.0" in notes
+    assert "release-preparation changes" not in notes
+    assert "(pre-release)" not in notes

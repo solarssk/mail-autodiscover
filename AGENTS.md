@@ -114,7 +114,10 @@ redirecting clients to HTTP behind a TLS-terminating proxy.
   Only `docs/`, `README.md`, `SECURITY.md`, `CHANGELOG.md`, and `CONTRIBUTING.md`
   count. Agent-guide-only changes need "No doc update needed" with a real reason.
 - Each PR needs one `type:` label; add relevant topic labels. See `CONTRIBUTING.md`.
-- Release only after compatibility and security findings are resolved. Bump
+- Release only after confirmed compatibility and security defects are resolved.
+  Keep gates scoped to this configuration-only component; a full client/OS
+  certification matrix or dedicated VMs are not release prerequisites.
+  Record available client evidence without inventing results. Bump
   `pyproject.toml`, add the hybrid CHANGELOG entry and comparison links, and
   align Compose/example image tags. Do not bump a version during preparation.
 - `release.yml` creates the tag and release on merge, dispatches image promotion,

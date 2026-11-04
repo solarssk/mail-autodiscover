@@ -1,5 +1,21 @@
 # Outlook
 
+The service returns IMAP/SMTP Autodiscover XML. It does not implement Exchange account provisioning. No version-specific compatibility matrix is published; classic Outlook and new Outlook are not interchangeable compatibility claims. See the [compatibility scope](../../README.md#client-compatibility).
+
+## Recorded validation
+
+The maintainer reported a working Outlook setup on macOS on 2026-11-04. The installed application and OS metadata were read locally on that date:
+
+| Item | Recorded evidence |
+|------|-------------------|
+| Outlook version | 16.114.3 |
+| Outlook build | 16.114.26102720 |
+| macOS version | 27.0.1 |
+| Functional result | Maintainer reports the setup works; not independently reproduced |
+| Not separately recorded | New/Legacy Outlook mode, fresh account discovery without manual server settings, send/receive results, and mail transport ports |
+
+This is a partial validation record, not a completed compatibility certification. See the [release validation scope](../../CONTRIBUTING.md#release-readiness). A separate [Thunderbird laboratory result](thunderbird.md#recorded-validation) is recorded; Apple Mail results remain unrecorded.
+
 ## What Users Do
 
 1. Add the mailbox address in Outlook.
