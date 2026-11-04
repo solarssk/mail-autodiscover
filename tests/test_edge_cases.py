@@ -1,10 +1,31 @@
 """Edge-case and optional-feature tests."""
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.security import reset_rate_limit_store
 from tests.conftest import OUTLOOK_REQUEST_TEMPLATE, FixedSettingsProvider, make_settings
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/health/",
+        "/mail/config-v1.1.xml/",
+        "/mail/ios.mobileconfig/",
+        "/autodiscover/autodiscover.xml/",
+    ],
+)
+def test_routes_do_not_redirect_to_http_behind_tls_proxy(client: TestClient, path: str) -> None:
+    response = client.get(
+        path,
+        params={"emailaddress": "user@example.com"},
+        headers={"X-Forwarded-Proto": "https"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 404
+    assert "location" not in response.headers
 
 
 def test_health_endpoint(client: TestClient) -> None:

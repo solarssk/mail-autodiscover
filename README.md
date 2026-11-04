@@ -103,6 +103,7 @@ Every request is stateless: settings come straight from environment variables or
 ```env
 APP_ENV=production
 PUBLIC_BASE_URL=https://autodiscover.example.com
+CONFIG_FILE=
 ALLOWED_DOMAINS=example.com,example.org
 MAIL_DISPLAY_NAME=Example Mail
 MAIL_DISPLAY_SHORT_NAME=Example
@@ -117,7 +118,7 @@ TRUST_PROXY_HEADERS=true
 TRUSTED_PROXY_IPS=127.0.0.1,10.0.0.0/8
 ```
 
-This mode serves the same IMAP/SMTP profile for every domain listed in `ALLOWED_DOMAINS`.
+Leave `CONFIG_FILE` empty to serve the same IMAP/SMTP profile for every domain listed in `ALLOWED_DOMAINS`.
 
 ### Multi-domain config file
 
@@ -129,9 +130,18 @@ CONFIG_FILE=/config/config.yaml
 
 Then mount a file like [`config/config.example.yaml`](config/config.example.yaml).
 
-If `CONFIG_FILE` exists, domain settings load from YAML and the application ignores the global `ALLOWED_DOMAINS`/`IMAP_*`/`SMTP_*` values for request routing.
+A nonempty `CONFIG_FILE` selects YAML mode. A missing, unreadable, empty, or invalid file prevents startup; the application does not fall back to ENV. YAML replaces the global domain and mail server values for request routing.
 
 `USERNAME_FORMAT` is not per-domain in YAML mode; it still comes from ENV and applies to every configured domain.
+
+### Mail server validation
+
+Both modes validate the effective connection settings at startup:
+
+- Hosts must be IP addresses or DNS hostnames, without a URL scheme, path, or port. Private IPs, IPv6, and single-label internal names are accepted. Internationalized DNS names are converted to ASCII punycode before being returned to clients.
+- Ports must be in `1` to `65535`.
+- Authentication uses the [Thunderbird Autoconfig tokens](https://wiki.mozilla.org/Thunderbird:Autoconfiguration:ConfigFileFormat): `password-cleartext`, `password-encrypted`, `NTLM`, `GSSAPI`, `client-IP-address`, `TLS-client-cert`, `OAuth2`, `none`, or `SMTP-after-POP` (SMTP only). These values describe Thunderbird's configuration, not a promise that every client supports every method. Outlook and Apple profiles currently use password authentication.
+- Production requires `SSL` or `STARTTLS`. Set `ALLOW_INSECURE_MAIL=true` only for an intentional legacy configuration using `plain`. Password authentication named `password-cleartext` remains encrypted in transit when paired with SSL or STARTTLS.
 
 ## Docker / Portainer
 
@@ -153,9 +163,19 @@ or from Docker Hub:
 docker compose -f docker-compose.dockerhub.yml up -d
 ```
 
-The compose examples mount `./config:/config:ro`, so placing `config/config.yaml` next to the compose file is enough for multi-domain mode.
+The Compose examples mount `./config:/config:ro`. For multi-domain mode, place `config/config.yaml` there and set `CONFIG_FILE=/config/config.yaml`.
 
-Both registries carry the same image, built and scanned once per release — pick whichever fits your setup:
+All three Compose stacks bind to `127.0.0.1:8088` by default. Choose the connection path that matches your proxy:
+
+| Proxy location | Upstream and binding |
+|----------------|----------------------|
+| On the same host | Use `http://127.0.0.1:8088`; keep `HOST_BIND=127.0.0.1` |
+| In another container | Join a shared Docker network and use `http://mail-autodiscover:8000`. A published host port is not needed |
+| On another host | Set `HOST_BIND` to the Docker host's private LAN address and firewall `HOST_PORT` so only the proxy can reach it |
+
+`HOST_BIND=0.0.0.0` explicitly exposes the port on every IPv4 interface. Do not use it without network restrictions. Loopback binding alone does not isolate containers on a shared Docker network.
+
+Both registries carry the same scanned image. Source builds run on `main`; releases promote that commit's digest without rebuilding:
 
 ```text
 ghcr.io/solarssk/mail-autodiscover:latest
@@ -169,6 +189,9 @@ Prefer pinned tags or digests in production.
 - `TRUST_PROXY_HEADERS=false` is the safe default.
 - Enable `TRUST_PROXY_HEADERS=true` only when traffic really arrives through your own proxy.
 - In production, `TRUSTED_PROXY_IPS` is required whenever proxy header trust is enabled.
+- Uvicorn's own proxy parsing is disabled in the container. The application owns client-IP resolution and checks the actual TCP peer.
+- Your proxy must overwrite or remove client-supplied `X-Real-IP` and correctly construct `X-Forwarded-For`. A trusted proxy passing forged headers through can still corrupt client-IP attribution.
+- Use the exact endpoint paths. Trailing-slash variants return `404`, not a redirect that could downgrade an HTTPS URL to HTTP.
 - Thunderbird and Apple Mail use `?emailaddress=user@example.com` in the query string.
 
 **Important:** your reverse proxy may log the full query string even though this application never does. Review access log settings for:
@@ -184,7 +207,7 @@ Prefer pinned tags or digests in production.
 |--------|------|---------|
 | `GET` | `/health` | Liveness probe |
 | `GET` | `/ready` | Readiness probe |
-| `GET` | `/` | Minimal landing page |
+| `GET` | `/` | Static information page with light/dark themes; no login or configuration details |
 | `GET` | `/robots.txt` | No-index hint |
 | `GET` | `/mail/config-v1.1.xml?emailaddress=...` | Thunderbird Autoconfig |
 | `GET` | `/.well-known/autoconfig/mail/config-v1.1.xml?emailaddress=...` | Thunderbird alias |
@@ -249,7 +272,7 @@ source .venv/bin/activate
 pip install ".[dev]"
 pre-commit install
 cp .env.example .env
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --reload
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log --no-proxy-headers --reload
 ```
 
 For development with placeholder values, set `APP_ENV=test` or `APP_ENV=development`.

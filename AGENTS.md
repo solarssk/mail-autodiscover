@@ -1,166 +1,123 @@
-# AGENTS.md — project context for AI coding agents
+# Agent guide
 
-> `CLAUDE.md` imports this file (`@AGENTS.md`) and adds Claude-Code-specific workflow
-> notes on top. Keep project-wide context here so both files can't drift apart.
+Shared context for coding agents. `CLAUDE.md` imports this file.
 
-## Repository standard
+## Scope and standard
 
-This repository follows the solarssk engineering standard: https://github.com/solarssk/playbook
-Tier: 2 (see playbook/docs/tiers.md) — it ships a container image and runs as a
-deploy-and-forget service, which puts it at Tier 2 by the tier system's own first
-question, even though it has one maintainer and a narrow, deliberately small feature set.
+Stateless FastAPI service returning mail client settings for allowed domains.
+No database, admin panel, mailbox lookup, LDAP, password storage, or outbound mail calls.
+Keep the service small; do not add infrastructure to solve a local problem.
 
-Compliance with the Tier 2 checklist is checked mechanically on every push and PR by
-`.github/workflows/verify-standard.yml`, a reusable workflow from `solarssk/playbook`
-that reads the "Tier: 2" line above and runs the matching file/pattern checks (SHA-pinning,
-`SECURITY.md`, issue templates, `concurrency:` blocks, and more). It fails the build on a
-hard miss and warns on a soft one; it does not replace judgment on tier choice itself.
+Standard: https://github.com/solarssk/playbook
+Tier: 2
 
-## What this project is
+The service ships a container image. `.github/workflows/verify-standard.yml`
+checks the Tier 2 file and workflow requirements.
 
-`mail-autodiscover` is a stateless FastAPI service that returns mail client configuration
-(IMAP/SMTP/POP3) for allowed domains. It serves three autodiscovery protocols:
+## Security invariants
 
-- **Outlook Autodiscover** — `POST /autodiscover/autodiscover.xml`
-- **Thunderbird Autoconfig** — `GET /mail/config-v1.1.xml`
-- **Apple Mail profile** — `GET /mail/ios.mobileconfig`
+- Every syntactically valid address in an allowed domain gets the same response
+  shape, regardless of mailbox existence. Preserve `tests/test_no_mailbox_enumeration.py`.
+- Never log full email addresses, query strings, or request bodies. Application
+  access logs use domain hashes; proxies need their own privacy-safe logging.
+- Keep `TRUST_PROXY_HEADERS=false` by default. Enable trust only for configured
+  proxy IPs/CIDRs, and do not weaken production startup validation.
+- Parse request XML with `defusedxml`. Escape XML text with
+  `html.escape(..., quote=False)`, not `xml.sax.saxutils.escape` (Bandit B406).
+- The rate limiter is bounded and in-process, with a separate counter per worker.
+- The landing page must not expose configured domains or mail servers.
+  Keep it static, with no scripts, external assets, or password forms.
+  Use semantic headings and visible protocol details, not invented status,
+  badges, gradients, repetitive hero labels, or decorative numbered steps.
 
-There is no database, no admin panel, no mailbox existence check, and no LDAP integration.
-Keep it that way.
+## Code map
 
-## Critical security invariant — never break this
+| File | Responsibility |
+|------|----------------|
+| `app/main.py` | App factory, routes, bounded request reads |
+| `app/config.py` | ENV/YAML settings and startup validation |
+| `app/security.py` | Headers, rate limits, proxy trust, safe access logs |
+| `app/email_utils.py` | Address validation and username formatting |
+| `app/templates.py` | Outlook and Thunderbird XML |
+| `app/mobileconfig.py` | Apple Mail profiles |
+| `app/landing.py`, `app/static/` | Public page, robots.txt, icons |
+| `tests/` | pytest, enforced branch coverage of at least 90% on `app/` |
+| `docs/` | Deployment, DNS, endpoints, client guides |
 
-The service must return **the same response shape** for every syntactically valid address in an
-allowed domain, regardless of whether the mailbox actually exists. Any code path that reveals
-whether `alice@example.com` exists while `bob@example.com` does not is a bug.
+Read the relevant code and tests before changing behavior. Prefer existing
+helpers and standard-library tools over new dependencies or one-use abstractions.
+Add regression tests and update affected user documentation.
 
-## Tech stack
+## Configuration
 
-| Layer | Choice |
-|-------|--------|
-| Framework | FastAPI |
-| Config | `pydantic-settings` (ENV or YAML via `CONFIG_FILE`) |
-| XML parsing | `defusedxml` (safe) |
-| XML escaping | `html.escape(..., quote=False)` |
-| YAML | `PyYAML` |
-| Server | `uvicorn[standard]` |
-| Python | ≥ 3.12 |
+- ENV mode uses `ALLOWED_DOMAINS` and global `IMAP_*`, `SMTP_*`, `POP3_*`.
+- Empty `CONFIG_FILE` selects ENV. A nonempty path is required to exist and contain
+  valid YAML; it replaces ENV domain routing. See `config/config.example.yaml`.
+- `USERNAME_FORMAT` always comes from ENV, including in YAML mode.
+- Validate effective mail settings through `MailServerSettings` in both modes.
+  Do not reject unused ENV host/port/authentication values in YAML mode.
+- Production rejects `plain` transport unless `ALLOW_INSECURE_MAIL=true`.
+  `password-cleartext` over SSL/STARTTLS is still encrypted in transit.
+- Production rejects placeholders and unsafe proxy settings.
+  Use `APP_ENV=development` or `test` only for local development/tests.
 
-## Project layout
+## Development and checks
 
-```
-app/
-  main.py          # FastAPI app factory + all routes
-  config.py        # Settings, DomainMailSettings, YAML loader
-  security.py      # SecurityMiddleware, rate limiter, logging, header sanitisation
-  templates.py     # Outlook XML and Thunderbird XML builders
-  mobileconfig.py  # Apple Mail .mobileconfig builder
-  email_utils.py   # Email validation
-  landing.py       # Landing page HTML and robots.txt
-  static/          # favicon.ico, apple-touch-icon.png
-config/
-  config.example.yaml   # Multi-domain YAML example
-docs/              # Reverse-proxy, DNS, client, and troubleshooting guides
-scripts/
-  check.sh                  # Local CI mirror
-  format_release_notes.py   # Formats CHANGELOG entry into GitHub release body
-tests/             # pytest — ≥ 90 % coverage on app/ is enforced
-```
-
-## Local development
+Use Python 3.12 or newer, not an OS-provided older `python3`/`pytest`.
+CI covers 3.12 and the Docker runtime, 3.14.
 
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 pip install ".[dev]"
 pre-commit install
-cp .env.example .env          # set APP_ENV=development
-uvicorn app.main:app --reload
+cp .env.example .env
+# Set APP_ENV=development in .env before starting.
+uvicorn app.main:app --reload --no-access-log --no-proxy-headers
+./scripts/check.sh
 ```
 
-Set `APP_ENV=development` or `APP_ENV=test` to bypass production-only startup validation.
+Run focused tests during edits, then the full local check before handing off.
+`scripts/check.sh` prefers `.venv/bin/` and covers Ruff, pytest, mypy, Bandit,
+lock drift, pip-audit, and deptry. Docker/Trivy, gitleaks, and workflow checks run
+separately in CI. Never bypass commit hooks with `--no-verify`.
 
-## Running checks
+Uvicorn's proxy parsing must stay disabled; the application checks the actual
+TCP peer. Use exact route paths: trailing-slash variants return 404 rather than
+redirecting clients to HTTP behind a TLS-terminating proxy.
 
-```bash
-./scripts/check.sh                        # full CI mirror (ruff, mypy, pytest, bandit, etc.)
-SKIP_PIP_AUDIT=1 SKIP_DEPTRY=1 ./scripts/check.sh  # skip slower scans
-pytest                                    # tests only
-```
+## Dependencies and images
 
-## Configuration modes
+- Five generated requirements files are hash-pinned. After any dependency change,
+  including Dependabot updates, run `./scripts/lock_dependencies.sh`.
+  The wrapper uses isolated Python 3.14 runtime and Python 3.12 dev environments.
+- Verify without modifying files: `./scripts/lock_dependencies.sh all --check`.
+  Only comments and blank lines are ignored; never ignore version/hash drift.
+- New transitive dependencies can be missing after Dependabot edits. Regenerate
+  all locks instead of disabling hash verification.
+- Ruff is pinned in the `lint` extra. Reinstall `.[dev]` after changing the pin;
+  local pre-commit uses the active environment.
+- Preserve Docker's `CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}`.
+  A commit SHA does not force OS updates on same-commit rebuilds/retries.
+  Keep `ARG CACHEBUST` and `apt-get upgrade` after dependency installation to
+  avoid reinstalling Python dependencies on every build.
+- Source builds on `main` are scanned before publishing. Version tags promote
+  the already-scanned digest to GHCR and Docker Hub, without rebuilding it.
+  Never move an existing release tag to a rebuilt image.
 
-**Single-domain (ENV):** set `ALLOWED_DOMAINS`, `IMAP_HOST`, `SMTP_HOST`, etc. in `.env`.
+## PRs and releases
 
-**Multi-domain (YAML):** set `CONFIG_FILE=/config/config.yaml` and mount a YAML file that
-follows the shape in `config/config.example.yaml`. When `CONFIG_FILE` exists and is valid,
-ENV-based `ALLOWED_DOMAINS`/`IMAP_*`/`SMTP_*` values are ignored for routing.
-
-`USERNAME_FORMAT` is always read from ENV, even in YAML mode.
-
-## Release process
-
-1. Bump `version` in `pyproject.toml`.
-2. Add a `## [X.Y.Z] - YYYY-MM-DD` entry in `CHANGELOG.md` following the hybrid format
-   described in `CONTRIBUTING.md` (narrative sections first, then KaC technical sections).
-3. Update the version comparison links at the bottom of `CHANGELOG.md`:
-   each `[VERSION]` must link to `compare/vPREV...vVERSION`.
-4. Open a PR, merge to `main`. That's it — no manual tag push.
-
-`release.yml` runs on every push to `main` and compares `pyproject.toml`'s version before and
-after: if it changed and `CHANGELOG.md` has a matching `## [X.Y.Z] - YYYY-MM-DD` heading, it
-creates the `vX.Y.Z` tag and GitHub Release (notes formatted from that CHANGELOG entry),
-dispatches `docker-publish.yml` for that tag (GHCR + Docker Hub, tag pushes made by
-`GITHUB_TOKEN` don't self-trigger other workflows), and closes the matching `vX.Y.Z` milestone
-if one is open. Any other push is a no-op for this workflow. If the version bumped but the
-CHANGELOG heading is missing or misdated, it skips with a warning instead of creating a
-broken release — fix the CHANGELOG entry and push again.
-
-## Things to be careful about
-
-- **No `--no-verify` on commits** — pre-commit hooks enforce code quality.
-- **Never log full email addresses** — `security.py` intentionally logs only domain hashes.
-- **Proxy header trust is off by default** (`TRUST_PROXY_HEADERS=false`). Do not change the
-  default.
-- **Production startup validation** in `config.py` rejects placeholder values and unsafe proxy
-  settings — do not weaken it.
-- **Rate limiter is in-process** — one counter per uvicorn worker. Document this limitation
-  when discussing multi-worker deployments.
-- **XML escaping uses `html.escape(..., quote=False)`**, not `xml.sax.saxutils.escape`.
-  Keep it that way (Bandit B406).
-- **Dependencies are hash-pinned in five generated requirements files.** Regenerate
-  all of them after dependency changes, including Dependabot updates, with
-  `./scripts/lock_dependencies.sh`. It uses Python 3.14 for runtime and Python 3.12
-  for dev locks, in isolated environments with pip-tools pinned in the wrapper.
-  `./scripts/lock_dependencies.sh all --check` verifies installation content without
-  modifying tracked files; full-line comments and blank lines do not count as drift.
-  CI and `scripts/check.sh` use the same wrapper. The local `dev` extra stays unlocked.
-- **Dependabot can omit newly introduced transitive dependencies.** If hash-pinned
-  installs fail after an update, regenerate all five locks using the command above.
-  Do not disable hash verification or ignore changes to package versions or hashes.
-- **Ruff's version is pinned in the `lint` extra.** The local pre-commit hook uses
-  the active development environment; reinstall `.[dev]` after updating that pin.
-- **The Dockerfile's `apt-get upgrade` step needs its `ARG CACHEBUST` fed a real per-run
-  value, or a real bug that shipped for a while undetected comes back**: Docker's build cache
-  keys that layer only on its command text (including any `ARG` it consumes) and its parent
-  layer, so without a per-build cache-buster it gets served from `docker-publish.yml`'s
-  `cache-from: type=gha` forever after the first build off a given digest — the image then
-  stops receiving Debian security patches even though the workflow appears to build normally
-  every time (confirmed: `apt-get upgrade` showed `CACHED` in every build log for weeks, and a
-  forced rebuild found a real pending OpenSSL update). `docker-publish.yml` passes
-  `CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}`, not the commit SHA — a
-  `workflow_dispatch` on an unchanged `main`, or a re-run of an existing run, would otherwise
-  keep the same SHA and hit the same stale cache again. The ARG's *placement* after
-  `COPY`/`pip install` is a separate, cache-efficiency choice, not part of the security
-  requirement: verified empirically that moving the ARG+RUN block earlier still forces a fresh
-  `apt-get upgrade` on every build (the CACHEBUST value alone determines that), it just also
-  cascades into invalidating the `COPY`/`pip install` layers on every build too — a real
-  reinstall-everything cost, not a staleness bug. Keep it late to avoid that cost, not because
-  moving it would reopen the original bug.
-- **The PR template's "Documentation impact" declaration is checked against the diff** by
-  `scripts/check_pr_docs_impact.py`, and it only counts the paths in its `DOCS_PATHS` as
-  documentation (`docs/`, `README.md`, `SECURITY.md`, `CHANGELOG.md`, `CONTRIBUTING.md`).
-  `AGENTS.md` and `CLAUDE.md` are not among them, so a PR that changes only those must tick
-  "No doc update needed" with a real reason; ticking "Docs updated" fails the check because
-  no declared doc path changed. Read that script before filling in the box, not after the
-  check goes red.
+- Prepare changes on a feature branch; the maintainer decides and merges.
+- Use `.github/pull_request_template.md`. Include exact validation commands
+  and results. Do not add `Co-authored-by` trailers or em dashes to new prose.
+- Documentation impact is checked by `scripts/check_pr_docs_impact.py`.
+  Only `docs/`, `README.md`, `SECURITY.md`, `CHANGELOG.md`, and `CONTRIBUTING.md`
+  count. Agent-guide-only changes need "No doc update needed" with a real reason.
+- Each PR needs one `type:` label; add relevant topic labels. See `CONTRIBUTING.md`.
+- Release only after compatibility and security findings are resolved. Bump
+  `pyproject.toml`, add the hybrid CHANGELOG entry and comparison links, and
+  align Compose/example image tags. Do not bump a version during preparation.
+- `release.yml` creates the tag and release on merge, dispatches image promotion,
+  and closes the matching milestone. No manual tag push.
+- Read `CONTRIBUTING.md` for release formatting and recovery. Do not guess how
+  retries, changelog recovery, or image promotion work from workflow names.

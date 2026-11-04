@@ -6,7 +6,7 @@ services:
     env_file:
       - .env
     ports:
-      - "${HOST_PORT:-8088}:${CONTAINER_PORT:-8000}"
+      - "${HOST_BIND:-127.0.0.1}:${HOST_PORT:-8088}:${CONTAINER_PORT:-8000}"
     volumes:
       - ./config:/config:ro
     healthcheck:

@@ -185,6 +185,7 @@ def create_app(settings_provider: SettingsProvider | None = None) -> FastAPI:
 
     app = FastAPI(
         title=settings.app_name,
+        redirect_slashes=False,
         docs_url=None,
         redoc_url=None,
         openapi_url=None,

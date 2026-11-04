@@ -12,6 +12,19 @@ from app.main import create_app
 from tests.conftest import OUTLOOK_REQUEST_TEMPLATE, FixedSettingsProvider, make_settings
 
 
+@pytest.mark.parametrize("app_env", ["test", "production"])
+def test_missing_explicit_config_file_prevents_startup(tmp_path: Path, app_env: str) -> None:
+    with pytest.raises(ValidationError, match="Unable to read CONFIG_FILE"):
+        make_settings(
+            app_env=app_env,
+            config_file=str(tmp_path / "missing.yaml"),
+            allowed_domains="example.test",
+            imap_host="mail.example.test",
+            smtp_host="mail.example.test",
+            public_base_url="https://autodiscover.example.test",
+        )
+
+
 def _write_config(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
@@ -102,9 +115,10 @@ domains:
     assert "<hostname>pop.second.example</hostname>" in tb.text
     assert "<displayName>Second Mail</displayName>" in tb.text
     assert mobileconfig.status_code == 200
-    assert "mail-autodiscover-second.example.mobileconfig" in mobileconfig.headers[
-        "content-disposition"
-    ]
+    assert (
+        "mail-autodiscover-second.example.mobileconfig"
+        in mobileconfig.headers["content-disposition"]
+    )
     assert outlook.status_code == 200
     assert "<Server>mail.example.com</Server>" in outlook.text
     assert "<Server>smtp.example.com</Server>" in outlook.text

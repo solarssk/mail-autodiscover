@@ -10,7 +10,7 @@ The service is stateless and never checks whether a mailbox exists (see [SECURIT
 |--------|------|-------|------------------|
 | `GET` | `/health` | none | `200`, `application/json`: `{"status":"ok"}` |
 | `GET` | `/ready` | none | `200`, `application/json`: `{"status":"ready"}` |
-| `GET` | `/` | none | `200`, `text/html`: minimal landing page |
+| `GET` | `/` | none | `200`, `text/html`: static information page with light/dark themes |
 | `GET` | `/robots.txt` | none | `200`, `text/plain`: no-index hint |
 | `GET` | `/favicon.ico` | none | `200`, `image/x-icon` |
 | `GET` | `/apple-touch-icon.png` | none | `200`, `image/png` |
@@ -20,6 +20,8 @@ The service is stateless and never checks whether a mailbox exists (see [SECURIT
 | `GET` | `/autodiscover/autodiscover.xml` | none | `200`, `application/xml`: neutral Outlook error (`Code="600"`), the same for everyone, also when `OUTLOOK_ENABLED=false` |
 
 The two Thunderbird paths and the two Apple Mail paths are aliases and answer identically. Every response carries an `X-Request-ID` header. It also carries the security headers described in [SECURITY.md](../SECURITY.md) unless you set `SECURITY_HEADERS_ENABLED=false` (they are on by default).
+
+Paths are exact. Adding a trailing slash returns `404` instead of redirecting to an HTTP URL behind a TLS-terminating proxy. The root path remains `/`.
 
 ## Status Codes
 
