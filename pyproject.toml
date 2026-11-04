@@ -30,7 +30,7 @@ test = [
 lint = [
     # Single version source for CI and the local pre-commit hook. Reinstall
     # .[dev] after updates so both environments run the same rules.
-    "ruff==0.17.1",
+    "ruff==0.17.3",
 ]
 typecheck = [
     "mypy>=1.13.0",
