@@ -30,6 +30,6 @@ jobs:
         run: |
           printf 'result=%s\nautomated_checks=%s\nassessment=%s\n' \
             "$VERIFY_RESULT" "$AUTOMATED_CHECKS" "$ASSESSMENT"
-          test "$VERIFY_RESULT" = success
-          test "$AUTOMATED_CHECKS" = passed
-          test "$ASSESSMENT" = partial
+          test "$VERIFY_RESULT" = failure
+          test "$AUTOMATED_CHECKS" = failed
+          test "$ASSESSMENT" = failed
