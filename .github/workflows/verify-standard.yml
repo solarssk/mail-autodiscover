@@ -14,4 +14,22 @@ permissions:
 
 jobs:
   verify:
-    uses: solarssk/playbook/.github/workflows/verify-tier.yml@0f0760fd3cf1eecee43deb2debbaa5a295fc3a8a  # v0.2.0
+    uses: solarssk/playbook/.github/workflows/verify-tier.yml@13da3943c81dd251d470a2ac82fbed705c2e8a1a  # temporary integration test
+
+  observe:
+    name: Observe verifier outputs
+    needs: verify
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate actual reusable workflow outputs
+        env:
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          AUTOMATED_CHECKS: ${{ needs.verify.outputs.automated_checks }}
+          ASSESSMENT: ${{ needs.verify.outputs.assessment }}
+        run: |
+          printf 'result=%s\nautomated_checks=%s\nassessment=%s\n' \
+            "$VERIFY_RESULT" "$AUTOMATED_CHECKS" "$ASSESSMENT"
+          test "$VERIFY_RESULT" = success
+          test "$AUTOMATED_CHECKS" = passed
+          test "$ASSESSMENT" = partial
